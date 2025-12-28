@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>大關西散策2026 V60</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React & Babel -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- SheetJS & Tesseract -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1976D2"> <!-- Theme color matches the new blue icon -->
+
+  <!-- Dynamic Icon Targets -->
+  <link id="app-icon" rel="apple-touch-icon" href="">
+  <link id="fav-icon" rel="icon" type="image/png" href="">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #FCE4EC;
+      --paper-color: #FFFFFF;
+      --text-color: #4A4A4A;
+    }
+
+    body { 
+      font-family: 'Zen Maru Gothic', sans-serif;
+      background-color: var(--bg-color); 
+      -webkit-tap-highlight-color: transparent; 
+      overscroll-behavior-y: none; 
+      user-select: none;
+      font-weight: 700;
+      color: var(--text-color);
+      height: 100dvh;
+      width: 100vw;
+      overflow: hidden;
+      position: fixed;
+    }
+    
+    #root {
+      height: 100%;
+      width: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .safe-area-top { padding-top: env(safe-area-inset-top); background-color: #1976D2; } /* Header BG Color changed to match icon */
+    .safe-area-bottom { padding-bottom: max(env(safe-area-inset-bottom), 20px); background-color: white; }
+    
+    .ticket-box {
+      position: relative;
+      background: var(--paper-color);
+      filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.1));
+      margin-bottom: 25px; 
+      border-radius: 4px 4px 0 0;
+    }
+    .ticket-box::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -10px;
+      width: 100%;
+      height: 10px;
+      background: 
+        linear-gradient(135deg, var(--paper-color) 50%, transparent 50%), 
+        linear-gradient(225deg, var(--paper-color) 50%, transparent 50%);
+      background-position: 0 0, 10px 0;
+      background-size: 20px 20px;
+      background-repeat: repeat-x;
+    }
+
+    .dashed-input {
+      border: 2px dashed #CFD8DC;
+      background-color: #FAFAFA;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .dashed-input:focus-within {
+      border-color: #F48FB1;
+      background-color: #FFF;
+    }
+    
+    .calc-btn {
+      background: white;
+      border: 2px solid #E0E0E0;
+      border-radius: 12px;
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: #555;
+      box-shadow: 0 3px 0 #E0E0E0;
+      transition: all 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .calc-btn:active {
+      transform: translateY(3px);
+      box-shadow: none;
+    }
+    .calc-btn-op {
+      background: #FFF3E0;
+      border-color: #FFE0B2;
+      box-shadow: 0 3px 0 #FFE0B2;
+      color: #E65100;
+    }
+    .calc-btn-ok {
+      background: #F48FB1;
+      border-color: #EC407A;
+      box-shadow: 0 3px 0 #C2185B;
+      color: white;
+    }
+
+    .washi-tape {
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%) rotate(-1.5deg);
+      width: 70px;
+      height: 16px;
+      background-color: rgba(255, 255, 255, 0.5);
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(233, 30, 99, 0.15) 5px, rgba(233, 30, 99, 0.15) 10px);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      z-index: 20;
+      opacity: 0.95;
+      pointer-events: none;
+      border-left: 2px solid rgba(255,255,255,0.4);
+      border-right: 2px solid rgba(255,255,255,0.4);
+    }
+    .washi-tape:nth-child(even) { transform: translateX(-50%) rotate(1deg); background-image: repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(33, 150, 243, 0.15) 5px, rgba(33, 150, 243, 0.15) 10px); }
+    
+    .paper-texture { 
+      background-color: #FFFDF7; 
+      background-image: radial-gradient(#E0E0E0 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .fade-in { animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    input, select, textarea { font-size: 16px !important; font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; }
+    
+    .snap-x-mandatory { scroll-snap-type: x mandatory; }
+    .snap-center { scroll-snap-align: center; }
+    
+    .modal-backdrop {
+      background-color: rgba(93, 64, 55, 0.6); 
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    .stamp-animation { animation: stamp 0.3s ease-out forwards; }
+    @keyframes stamp {
+      0% { transform: scale(3) rotate(-20deg); opacity: 0; }
+      100% { transform: scale(1) rotate(-10deg); opacity: 1; }
+    }
+
+    .banner-font { font-family: 'Yomogi', 'Zen Maru Gothic', sans-serif; font-weight: 400; }
+
+    .snowflake {
+      position: absolute;
+      top: -10px;
+      color: white;
+      font-size: 10px;
+      animation: fall linear infinite;
+      opacity: 0.8;
+      pointer-events: none;
+    }
+    @keyframes fall { to { transform: translateY(120px); opacity: 0; } }
+    
+    .animate-cute-bounce { animation: cute-bounce 2s infinite ease-in-out; }
+    @keyframes cute-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+    @media print {
+      body, #root { position: relative; height: auto; overflow: visible; background: white; }
+      body * { visibility: hidden; }
+      #booklet-root, #booklet-root * { visibility: visible; }
+      #booklet-root { position: absolute; left: 0; top: 0; width: 100%; z-index: 9999; background: white; color: black; font-family: 'Zen Maru Gothic', sans-serif; }
+      .page-break { page-break-before: always; }
+      .avoid-break { page-break-inside: avoid; }
+      .safe-area-top, .safe-area-bottom, .modal-backdrop, .print-hidden { display: none !important; }
+      .no-print { display: none !important; }
+    }
+    
+    .sparkle-btn { background: linear-gradient(45deg, #F48FB1, #FFD54F); color: white; border: 2px solid white; box-shadow: 0 4px 10px rgba(244, 143, 177, 0.4); border-radius: 20px; }
+    .loading-spin { animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-[#FCE4EC]">
+  <div id="root"></div>
+  <div id="booklet-root"></div>
+
+  <!-- Icon Generator Script -->
+  <script>
+    window.addEventListener('load', function() {
+      // SVG Design: Blue BG + Snow + Tottori Dunes + Izumo Taisha Torii
+      const svgString = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+        <rect width="512" height="512" fill="#1976D2"/>
+        
+        <!-- Snow -->
+        <circle cx="50" cy="50" r="8" fill="white" opacity="0.8"/>
+        <circle cx="120" cy="150" r="5" fill="white" opacity="0.6"/>
+        <circle cx="400" cy="80" r="10" fill="white" opacity="0.7"/>
+        <circle cx="480" cy="300" r="6" fill="white" opacity="0.5"/>
+        <circle cx="200" cy="20" r="7" fill="white" opacity="0.9"/>
+        <circle cx="300" cy="180" r="4" fill="white" opacity="0.6"/>
+        
+        <!-- Tottori Sand Dunes -->
+        <path d="M0 380 Q 150 320 300 360 T 512 340 V 512 H 0 Z" fill="#FDD835"/>
+        <path d="M0 440 Q 250 400 512 460 V 512 H 0 Z" fill="#FBC02D"/>
+
+        <!-- Izumo Taisha Torii -->
+        <g transform="translate(136, 100) scale(0.9)">
+           <!-- Pillars -->
+           <rect x="40" y="50" width="30" height="300" fill="#D32F2F"/>
+           <rect x="190" y="50" width="30" height="300" fill="#D32F2F"/>
+           <!-- Top Lintel (Kasagi) -->
+           <path d="M20 50 Q 130 10 240 50 L 250 30 Q 130 -10 10 30 Z" fill="#D32F2F"/>
+           <!-- Lower Lintel (Nuki) -->
+           <rect x="40" y="110" width="180" height="20" fill="#D32F2F"/>
+           <!-- Shimenawa (Sacred Rope) -->
+           <path d="M40 110 Q 130 200 220 110" stroke="#FFF9C4" stroke-width="25" fill="none" stroke-linecap="round"/>
+           <path d="M40 110 Q 130 200 220 110" stroke="#FBC02D" stroke-width="2" fill="none" stroke-dasharray="10,10" opacity="0.5"/>
+        </g>
+        
+        <!-- Text -->
+        <text x="256" y="480" font-family="sans-serif" font-size="50" font-weight="900" fill="white" text-anchor="middle" letter-spacing="4" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">2026</text>
+      </svg>
+      `;
+      
+      const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512;
+      const ctx = canvas.getContext('2d'); const img = new Image();
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
+      img.onload = function() {
+          let appIcon = document.getElementById('app-icon'); if(!appIcon) { appIcon = document.createElement('link'); appIcon.id = 'app-icon'; appIcon.rel = 'apple-touch-icon'; document.head.appendChild(appIcon); }
+          let favIcon = document.getElementById('fav-icon'); if(!favIcon) { favIcon = document.createElement('link'); favIcon.id = 'fav-icon'; favIcon.rel = 'icon'; favIcon.type = 'image/png'; document.head.appendChild(favIcon); }
+          ctx.drawImage(img, 0, 0); const pngUrl = canvas.toDataURL('image/png'); appIcon.href = pngUrl; favIcon.href = pngUrl;
+      };
+    });
+  </script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+    const apiKey = ""; // API Key provided by environment
+
+    const callGeminiAPI = async (prompt) => {
+        if (!apiKey) { alert("請先設定 API Key 才能使用 AI 功能"); return ""; }
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const payload = { contents: [{ parts: [{ text: prompt }] }] };
+        const delays = [1000, 2000, 4000, 8000, 16000];
+        for (let i = 0; i <= 5; i++) {
+            try {
+                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            } catch (error) { if (i === 5) throw error; await new Promise(resolve => setTimeout(resolve, delays[i])); }
+        }
+    };
+
+    // --- Custom Icon Component for Header ---
+    const AppIcon = ({ size = 40 }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 512 512" className="rounded-lg shadow-md border-2 border-white">
+        <rect width="512" height="512" fill="#1976D2"/>
+        <circle cx="50" cy="50" r="8" fill="white" opacity="0.8"/>
+        <circle cx="120" cy="150" r="5" fill="white" opacity="0.6"/>
+        <circle cx="400" cy="80" r="10" fill="white" opacity="0.7"/>
+        <circle cx="480" cy="300" r="6" fill="white" opacity="0.5"/>
+        <circle cx="200" cy="20" r="7" fill="white" opacity="0.9"/>
+        <path d="M0 380 Q 150 320 300 360 T 512 340 V 512 H 0 Z" fill="#FDD835"/>
+        <path d="M0 440 Q 250 400 512 460 V 512 H 0 Z" fill="#FBC02D"/>
+        <g transform="translate(136, 100) scale(0.9)">
+           <rect x="40" y="50" width="30" height="300" fill="#D32F2F"/>
+           <rect x="190" y="50" width="30" height="300" fill="#D32F2F"/>
+           <path d="M20 50 Q 130 10 240 50 L 250 30 Q 130 -10 10 30 Z" fill="#D32F2F"/>
+           <rect x="40" y="110" width="180" height="20" fill="#D32F2F"/>
+           <path d="M40 110 Q 130 200 220 110" stroke="#FFF9C4" strokeWidth="25" fill="none" strokeLinecap="round"/>
+        </g>
+      </svg>
+    );
+
+    const Icon = ({ children, size = 24, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+    );
+    const Icons = {
+      Plus: (p) => <Icon {...p}><path d="M5 12h14"/><path d="M12 5v14"/></Icon>,
+      Trash2: (p) => <Icon {...p}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></Icon>,
+      Download: (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></Icon>,
+      ShoppingBag: (p) => <Icon {...p}><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></Icon>,
+      Map: (p) => <Icon {...p}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></Icon>,
+      Coins: (p) => <Icon {...p}><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></Icon>,
+      Check: (p) => <Icon {...p}><polyline points="20 6 9 17 4 12"/></Icon>,
+      X: (p) => <Icon {...p}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></Icon>,
+      FileSpreadsheet: (p) => <Icon {...p}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></Icon>,
+      Settings: (p) => <Icon {...p}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.72l-.15.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.72l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Icon>,
+      Refresh: (p) => <Icon {...p}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></Icon>,
+      Camera: (p) => <Icon {...p}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></Icon>,
+      Navigation: (p) => <Icon {...p}><polygon points="3 11 22 2 13 21 11 13 3 11"/></Icon>,
+      Loader: (p) => <Icon {...p}><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></Icon>,
+      Image: (p) => <Icon {...p}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></Icon>,
+      Suitcase: (p) => <Icon {...p}><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></Icon>,
+      Calendar: (p) => <Icon {...p}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></Icon>,
+      Utensils: (p) => <Icon {...p}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></Icon>,
+      Train: (p) => <Icon {...p}><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><path d="m8 19-2 3"/><path d="m18 22-2-3"/><path d="M8 15h0"/><path d="M16 15h0"/></Icon>,
+      Home: (p) => <Icon {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Icon>,
+      ListPlus: (p) => <Icon {...p}><path d="M11 12H3"/><path d="M16 6H3"/><path d="M16 18H3"/><path d="M18 9v6"/><path d="M21 12h-6"/></Icon>,
+      Clock: (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Icon>,
+      ArrowUp: (p) => <Icon {...p}><path d="m18 15-6-6-6 6"/></Icon>,
+      ArrowDown: (p) => <Icon {...p}><path d="m6 9 6 6 6-6"/></Icon>,
+      Info: (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></Icon>,
+      Ticket: (p) => <Icon {...p}><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M18 12h.01"/></Icon>,
+      Bed: (p) => <Icon {...p}><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></Icon>,
+      Book: (p) => <Icon {...p}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></Icon>,
+      Printer: (p) => <Icon {...p}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></Icon>,
+      Edit: (p) => <Icon {...p}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></Icon>,
+      Word: (p) => <Icon {...p}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></Icon>,
+      Delete: (p) => <Icon {...p}><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" x2="12" y1="9" y2="15"/><line x1="12" x2="18" y1="9" y2="15"/></Icon>,
+      Sparkles: (p) => <Icon {...p}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 5H5"/><path d="M19 17v4"/><path d="M15 19h4"/></Icon>
+    };
+
+    const INITIAL_ITINERARY = [{ id: 1, date: '2026-02-02', weekday: '日', content: '', transport: '名門大洋渡輪', stay: '船上', food: '船上自助餐', highlights: '欣賞瀨戶內海夜景', photo: null, schedule: [{ id: 101, time: '15:00', category: '交通', activity: '前往南港渡輪站', note: '提早check-in' }, { id: 102, time: '17:00', category: '交通', activity: '名門大洋渡輪 出發', note: '欣賞夕陽' }] }, { id: 2, date: '2026-02-03', weekday: '一', content: '', transport: 'JR / 步行', stay: '福岡 Quintessa', food: '燒咖哩', highlights: '懷舊建築、小倉城', photo: null, schedule: [{ id: 201, time: '08:30', category: '交通', activity: '抵達門司港', note: '下船' }, { id: 202, time: '10:00', category: '景點', activity: '門司港懷舊區', note: '拍照' }] }];
+    const INITIAL_SHOPPING = [{ id: 1, item: '合利他命', budget: 5000, bought: false, store: '松本清', priority: 'high', type: 'self', note: '', photo: null }];
+    const INITIAL_PACKING_CATEGORIES = ['重要證件 & 隨身', '洗漱 & 護理', '醫藥 & 保健', '美妝 & 保養', '衣物 & 穿搭', '電子 & 雜物'];
+    const INITIAL_PACKING_LIST = [{ id: 101, category: '重要證件 & 隨身', item: '護照 / 簽證', checked: false }, { id: 102, category: '重要證件 & 隨身', item: '機票 / 憑證 (VJW截圖)', checked: false }, { id: 103, category: '重要證件 & 隨身', item: '錢包 (現金/信用卡)', checked: false }, { id: 104, category: '重要證件 & 隨身', item: '行動電源', checked: false }, { id: 501, category: '衣物 & 穿搭', item: '換洗衣物', checked: false }];
+    const INITIAL_PAYMENT_METHODS = ['現金', '信用卡(中信)', '信用卡(富邦J)', '西瓜卡'];
+    const INITIAL_BOOKING_PLATFORMS = ['現場', 'Agoda', 'Booking', '官網', 'Klook', '東橫INN'];
+    const CATEGORIES = ['🍜 飲食', '🚃 交通', '🏨 住宿', '🛍️ 購物', '🎫 門票', '📝 其他'];
+    const SCHEDULE_CATEGORIES = [{ name: '景點', color: '#E64A19' }, { name: '吃飯', color: '#F57C00' }, { name: '逛街', color: '#C2185B' }, { name: '交通', color: '#455A64' }, { name: '住宿', color: '#303F9F' }, { name: '彈性', color: '#00796B' }];
+    const CITIES = ['大阪', '京都', '神戶', '奈良', '姬路', '宇治', '其他'];
+    const CURRENCIES = [{ code: 'JPY', label: '🇯🇵 JPY', symbol: '¥' }, { code: 'TWD', label: '🇹🇼 TWD', symbol: '$' }];
+    const BUTTON_COLORS = ['#FF9F43', '#4ECDC4', '#FF6B6B', '#6C5CE7', '#FFA502'];
+
+    const WeatherWidget = () => {
+        const [weather, setWeather] = useState(null);
+        const [time, setTime] = useState(new Date());
+        useEffect(() => {
+            const timer = setInterval(() => setTime(new Date()), 60000);
+            const fetchWeather = async () => { try { const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=34.6937&longitude=135.5023&current_weather=true'); const data = await res.json(); setWeather(data.current_weather); } catch (e) { console.warn("Weather fetch failed"); } };
+            fetchWeather(); return () => clearInterval(timer);
+        }, []);
+        return (<div className="flex gap-2 items-center text-white text-xs font-bold bg-white/20 rounded-xl px-3 py-1" style={{border: '1px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)'}}><span>{time.getHours().toString().padStart(2,'0')}:{time.getMinutes().toString().padStart(2,'0')}</span><span className="w-[1px] h-3 bg-white/50"></span><span>{weather ? `${weather.temperature}°C` : '...'}</span></div>);
+    };
+
+    const CalculatorModal = ({ isOpen, onClose, onConfirm, initialValue }) => {
+        const [display, setDisplay] = useState(initialValue ? String(initialValue) : '');
+        useEffect(() => { if (isOpen) setDisplay(initialValue ? String(initialValue) : ''); }, [isOpen, initialValue]);
+        if (!isOpen) return null;
+        const handleBtnClick = (val) => {
+            if (val === 'C') { setDisplay(''); return; }
+            if (val === 'DEL') { setDisplay(prev => prev.slice(0, -1)); return; }
+            if (val === 'OK') {
+                try {
+                    const safeEval = new Function('return ' + display.replace(/[^0-9+\-*/.]/g, ''));
+                    onConfirm(safeEval()); onClose();
+                } catch (e) { alert("算式錯誤 >_<"); }
+                return;
+            }
+            setDisplay(prev => prev + val);
+        };
+        const btns = ['7','8','9','/', '4','5','6','*', '1','2','3','-', 'C','0','.','+', 'DEL','OK'];
+        return (
+            <div className="fixed inset-0 z-[80] flex items-center justify-center modal-backdrop" onClick={onClose}>
+                <div className="bg-white w-[95%] max-w-sm p-5 fade-in ticket-box" style={{backgroundColor: '#FFF0F5'}} onClick={e => e.stopPropagation()}>
+                    <div className="flex justify-between items-center mb-2"><h3 className="font-bold text-lg text-gray-500">太陽能計算機 ☀️</h3><button onClick={onClose}><Icons.X size={24} className="text-gray-400"/></button></div>
+                    <div className="bg-[#E0F2F1] p-3 rounded-lg mb-4 text-right font-mono text-3xl text-gray-700 border-2 border-[#B2DFDB] overflow-x-auto h-16 flex items-center justify-end">{display || '0'}</div>
+                    <div className="grid grid-cols-4 gap-2">{btns.map(btn => (<button key={btn} onClick={() => handleBtnClick(btn)} className={`calc-btn h-14 ${['/','*','-','+'].includes(btn) ? 'calc-btn-op' : ''} ${btn === 'OK' ? 'col-span-2 calc-btn-ok' : ''} ${btn === 'DEL' ? 'text-red-400' : ''}`}>{btn === 'DEL' ? <Icons.Delete size={20}/> : btn}</button>))}</div>
+                </div>
+            </div>
+        );
+    };
+
+    function App() {
+      const loadState = (key, defaultVal) => { try { const val = localStorage.getItem(key); if (val === null) return defaultVal; const parsed = JSON.parse(val); return (Array.isArray(defaultVal) && !Array.isArray(parsed)) ? defaultVal : parsed; } catch (e) { return defaultVal; } };
+      const saveState = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.warn("Storage Full", e); } };
+
+      const [activeTab, setActiveTab] = useState('itinerary');
+      const [itinerary, setItinerary] = useState(() => loadState('crab_itinerary_v23', INITIAL_ITINERARY));
+      const [expenses, setExpenses] = useState(() => loadState('crab_expenses_v23', []) || []);
+      const [shoppingList, setShoppingList] = useState(() => loadState('crab_shopping_v23', INITIAL_SHOPPING) || []);
+      const [packingList, setPackingList] = useState(() => loadState('crab_packing_v23', INITIAL_PACKING_LIST) || []);
+      const [packingCategories, setPackingCategories] = useState(() => loadState('crab_packing_cats_v23', INITIAL_PACKING_CATEGORIES));
+      const [paymentMethods, setPaymentMethods] = useState(() => loadState('crab_methods_v23', INITIAL_PAYMENT_METHODS));
+      const [bookingPlatforms, setBookingPlatforms] = useState(() => loadState('crab_platforms_v23', INITIAL_BOOKING_PLATFORMS));
+      const [budgetSettings, setBudgetSettings] = useState(() => loadState('crab_budget_v23', { totalTWD: 50000, startDate: '2026-02-02', rates: { JPY_TWD: 0.215, USD_TWD: 31.5, KRW_TWD: 0.024, TWD_TWD: 1 } }));
+      const [memoContent, setMemoContent] = useState(() => loadState('crab_memo_v24', ''));
+      const [accommodations, setAccommodations] = useState(() => loadState('crab_accomm_v26', []) || []);
+      const [reservations, setReservations] = useState(() => loadState('crab_reserv_v26', []) || []);
+      const [gourmetList, setGourmetList] = useState(() => loadState('crab_gourmet_v30', []) || []);
+
+      const [showSettingsModal, setShowSettingsModal] = useState(false);
+      const [showExportModal, setShowExportModal] = useState(false);
+      const [showBatchModal, setShowBatchModal] = useState(false);
+      const [showExpenseModal, setShowExpenseModal] = useState(false);
+      const [showBooklet, setShowBooklet] = useState(false); 
+      const [showBuyDateModal, setShowBuyDateModal] = useState(false); 
+      const [tempBuyDate, setTempBuyDate] = useState(''); 
+      const [tempBuyId, setTempBuyId] = useState(null); 
+      const [showCalculator, setShowCalculator] = useState(false);
+      const [calcTarget, setCalcTarget] = useState(null);
+
+      // AI States
+      const [showAIModal, setShowAIModal] = useState(false);
+      const [aiType, setAiType] = useState(null); 
+      const [aiInput1, setAiInput1] = useState(''); 
+      const [aiInput2, setAiInput2] = useState(''); 
+      const [isGenerating, setIsGenerating] = useState(false);
+
+      const [batchType, setBatchType] = useState(null); 
+      const [batchTargetCategory, setBatchTargetCategory] = useState(null);
+      const [batchText, setBatchText] = useState('');
+      const [expenseFilter, setExpenseFilter] = useState('all');
+      const [currentDayIndex, setCurrentDayIndex] = useState(0);
+      const dayScrollRef = useRef(null);
+      const [isScanning, setIsScanning] = useState(false);
+      const [scanType, setScanType] = useState(null); 
+      const fileInputRef = useRef(null);
+      const backupInputRef = useRef(null); 
+      const [targetDayId, setTargetDayId] = useState(null); 
+      const [newPackingItemText, setNewPackingItemText] = useState('');
+      const [activePackingCategory, setActivePackingCategory] = useState(null);
+      const [newCategoryName, setNewCategoryName] = useState('');
+      const [editingScheduleId, setEditingScheduleId] = useState(null);
+      
+      const [newHotel, setNewHotel] = useState({ name: '', address: '', note: '', date: budgetSettings.startDate || '' });
+      const [newReserv, setNewReserv] = useState({ title: '', time: '', code: '' });
+      const [showAddHotel, setShowAddHotel] = useState(false);
+      const [showAddReserv, setShowAddReserv] = useState(false);
+      const [newGourmet, setNewGourmet] = useState({ name: '', city: '大阪', location: '', photo: null, note: '' });
+      const [showAddGourmet, setShowAddGourmet] = useState(false);
+
+      useEffect(() => { saveState('crab_itinerary_v23', itinerary); }, [itinerary]);
+      useEffect(() => { saveState('crab_expenses_v23', expenses); }, [expenses]);
+      useEffect(() => { saveState('crab_shopping_v23', shoppingList); }, [shoppingList]);
+      useEffect(() => { saveState('crab_packing_v23', packingList); }, [packingList]);
+      useEffect(() => { saveState('crab_packing_cats_v23', packingCategories); }, [packingCategories]);
+      useEffect(() => { saveState('crab_methods_v23', paymentMethods); }, [paymentMethods]);
+      useEffect(() => { saveState('crab_platforms_v23', bookingPlatforms); }, [bookingPlatforms]);
+      useEffect(() => { saveState('crab_budget_v23', budgetSettings); }, [budgetSettings]);
+      useEffect(() => { saveState('crab_memo_v24', memoContent); }, [memoContent]);
+      useEffect(() => { saveState('crab_accomm_v26', accommodations); }, [accommodations]);
+      useEffect(() => { saveState('crab_reserv_v26', reservations); }, [reservations]);
+      useEffect(() => { saveState('crab_gourmet_v30', gourmetList); }, [gourmetList]);
+
+      const [newExpense, setNewExpense] = useState({ date: itinerary[0]?.date || '', item: '', amount: '', currency: 'JPY', category: '🍜 飲食', method: paymentMethods[0], platform: bookingPlatforms[0], note: '' });
+      const [editingExpenseId, setEditingExpenseId] = useState(null);
+      const [newShopItem, setNewShopItem] = useState({ item: '', budget: '', store: '', priority: 'high', type: 'self', note: '', splitCount: 1, photo: null });
+
+      const formatDate = (dateStr) => { if(!dateStr) return ''; const d = new Date(dateStr); return `${d.getMonth()+1}/${d.getDate()}`; };
+      const getWeekday = (dateStr) => { const days = ['日', '一', '二', '三', '四', '五', '六']; return days[new Date(dateStr).getDay()]; };
+      const getExchangeRate = (currencyCode) => { return budgetSettings?.rates?.[`${currencyCode}_TWD`] || 1; };
+      const totalSpentConvertedTWD = expenses.reduce((acc, curr) => acc + Math.round(curr.amount * getExchangeRate(curr.currency)), 0);
+
+      const shoppingStats = shoppingList.reduce((acc, item) => {
+        if (item.type === 'self') acc.selfTotal += item.budget;
+        if (item.type === 'agent') acc.agentTotal += item.budget;
+        return acc;
+      }, { selfTotal: 0, agentTotal: 0 });
+
+      const agentSummary = shoppingList.filter(i => i.type === 'agent').reduce((acc, item) => {
+        if (!acc[item.note]) acc[item.note] = { jpy: 0, twd: 0 };
+        acc[item.note].jpy += item.budget;
+        acc[item.note].twd += Math.round(item.budget * getExchangeRate('JPY'));
+        return acc;
+      }, {});
+
+      const getDailyTotal = (date) => (expenses || []).filter(e => e.date === date).reduce((acc, curr) => acc + Math.round(curr.amount * getExchangeRate(curr.currency)), 0);
+      
+      const openGoogleMaps = (e, content) => { 
+          e.stopPropagation(); 
+          let query = content;
+          if (!query || query.trim() === '') {
+             alert("請先輸入地點，或在行程中新增活動！");
+             return;
+          }
+          const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+          const newWindow = window.open(url, '_blank');
+          if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+              if(confirm("彈跳視窗被攔截。是否直接在當前頁面開啟地圖？")) { window.location.href = url; }
+          }
+      };
+      
+      const scrollToDay = (index) => { if (dayScrollRef.current) { const width = dayScrollRef.current.offsetWidth; dayScrollRef.current.scrollTo({ left: width * index, behavior: 'smooth' }); setCurrentDayIndex(index); }};
+
+      const compressImage = (file) => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width; let height = img.height;
+                    if (width > 800) { height = Math.round((height * 800) / width); width = 800; }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.6));
+                }; img.src = event.target.result;
+            }; reader.readAsDataURL(file);
+        });
+      };
+
+      const handleFileSelect = async (e) => {
+        const file = e.target.files[0]; if (!file) return; setIsScanning(true);
+        try {
+            if (scanType === 'photo' && targetDayId) {
+                const base64 = await compressImage(file);
+                updateItinerary(targetDayId, 'photo', base64); alert('照片已儲存！');
+            } else if (scanType === 'gourmetPhoto' && targetDayId) {
+                 const base64 = await compressImage(file);
+                 if (targetDayId === 'new') { setNewGourmet(prev => ({ ...prev, photo: base64 })); } 
+                 else { setGourmetList(gourmetList.map(g => g.id === targetDayId ? { ...g, photo: base64 } : g)); }
+                 alert('美食照片已準備！');
+            } else if (scanType === 'shoppingPhoto' && targetDayId) {
+                 const base64 = await compressImage(file);
+                 setShoppingList(shoppingList.map(item => item.id === targetDayId ? { ...item, photo: base64 } : item));
+                 alert('戰利品照片已更新！');
+            } else {
+                if (typeof Tesseract === 'undefined') { alert('辨識功能載入中，請稍後再試'); return; }
+                const { data: { text } } = await Tesseract.recognize(file, 'eng+jpn+chi_tra');
+                if (scanType === 'receipt') {
+                    const numbers = text.match(/\d{1,3}(,\d{3})*(\.\d+)?/g) || [];
+                    const cleanNumbers = numbers.map(n => parseFloat(n.replace(/,/g, ''))).filter(n => n > 50 && n < 1000000); 
+                    const maxAmount = cleanNumbers.length > 0 ? Math.max(...cleanNumbers) : '';
+                    let guessedCategory = '🍜 飲食';
+                    const lowerText = text.toLowerCase();
+                    if (lowerText.includes('uniqlo') || lowerText.includes('donki') || lowerText.includes('gu') || lowerText.includes('shop') || lowerText.includes('zara')) guessedCategory = '🛍️ 購物';
+                    else if (lowerText.includes('bus') || lowerText.includes('train') || lowerText.includes('taxi') || lowerText.includes('subway') || lowerText.includes('ticket') || lowerText.includes('uber')) guessedCategory = '🚃 交通';
+                    else if (lowerText.includes('hotel') || lowerText.includes('inn') || lowerText.includes('apa') || lowerText.includes('toyoko')) guessedCategory = '🏨 住宿';
+                    else if (lowerText.includes('lawson') || lowerText.includes('7-eleven') || lowerText.includes('family') || lowerText.includes('cafe') || lowerText.includes('starbucks') || lowerText.includes('restaurant')) guessedCategory = '🍜 飲食';
+                    setNewExpense(prev => ({ ...prev, amount: maxAmount || prev.amount, category: guessedCategory, note: 'OCR收據辨識' }));
+                    alert(`收據辨識完成！\n偵測金額: ¥${maxAmount}\n分類: ${guessedCategory}`);
+                } else if (scanType === 'itineraryImport' && targetDayId) {
+                    const lines = text.split('\n');
+                    const newItems = [];
+                    lines.forEach(line => {
+                        const timeMatch = line.match(/(\d{1,2}[:：]\d{2})/);
+                        if (timeMatch) {
+                            const time = timeMatch[1].replace('：', ':');
+                            const activity = line.replace(timeMatch[0], '').trim();
+                            if(activity && activity.length > 1) { newItems.push({ id: Date.now() + Math.random(), time: time.padStart(5, '0'), category: '景點', activity: activity, note: 'OCR 匯入' }); }
+                        }
+                    });
+                    if(newItems.length > 0) {
+                         const updatedItinerary = itinerary.map(day => {
+                             if(day.id === targetDayId) { const mergedSchedule = [...(day.schedule || []), ...newItems].sort((a,b) => a.time.localeCompare(b.time)); return { ...day, schedule: mergedSchedule }; } return day;
+                         });
+                         setItinerary(updatedItinerary); alert(`成功辨識並匯入 ${newItems.length} 個行程項目！`);
+                    } else { alert('未能辨識出時間格式 (如 14:00)，請確認照片清晰度'); }
+                }
+            }
+        } catch (error) { console.error(error); alert('處理失敗，請重試'); } 
+        finally { setIsScanning(false); if(fileInputRef.current) fileInputRef.current.value = ''; setScanType(null); setTargetDayId(null); }
+      };
+
+      const openAIPlanner = (dayId) => { setAiType('itinerary'); setTargetDayId(dayId); setAiInput1('大阪'); setAiInput2('放鬆、逛街'); setShowAIModal(true); };
+      const openAIGourmet = () => { setAiType('gourmet'); setAiInput1('大阪'); setAiInput2('拉麵'); setShowAIModal(true); };
+
+      const handleAIGenerate = async () => {
+          if (!aiInput1 || !aiInput2) { alert('請填寫完整資訊'); return; }
+          setIsGenerating(true);
+          try {
+              if (aiType === 'itinerary') {
+                  const day = itinerary.find(d => d.id === targetDayId);
+                  const prompt = `Plan a detailed one-day itinerary for a trip to ${aiInput1} with the theme: ${aiInput2}. Date: ${day?.date}. Format strictly as a JSON array of objects: [{"time": "HH:MM", "category": "Category", "activity": "Activity Name", "note": "Short tip"}]. Time should be 24h format. Categories must be one of: 景點, 吃飯, 逛街, 交通. Language: Traditional Chinese.`;
+                  const resultText = await callGeminiAPI(prompt);
+                  const cleanText = resultText.replace(/```json|```/g, '').trim();
+                  const newItems = JSON.parse(cleanText);
+                  if(Array.isArray(newItems)) {
+                      const updatedItinerary = itinerary.map(d => d.id === targetDayId ? { ...d, schedule: [...(d.schedule || []), ...newItems.map(i=>({...i, id: Date.now()+Math.random()}))].sort((a,b) => a.time.localeCompare(b.time)) } : d);
+                      setItinerary(updatedItinerary); alert('行程規劃完成！'); setShowAIModal(false);
+                  }
+              } else if (aiType === 'gourmet') {
+                  const prompt = `Recommend 3 highly-rated restaurants in ${aiInput1} for ${aiInput2}. Format strictly as a JSON array of objects: [{"name": "Restaurant Name", "location": "Area/Address", "note": "Why it's good"}]. Language: Traditional Chinese.`;
+                  const resultText = await callGeminiAPI(prompt);
+                  const cleanText = resultText.replace(/```json|```/g, '').trim();
+                  const newItems = JSON.parse(cleanText);
+                  if(Array.isArray(newItems)) {
+                      setGourmetList([...gourmetList, ...newItems.map(i=>({...i, id: Date.now()+Math.random(), city: aiInput1, photo: null}))]);
+                      alert('美食推薦已加入！'); setShowAIModal(false);
+                  }
+              }
+          } catch(e) { console.error(e); alert('AI 生成失敗，請重試'); } finally { setIsGenerating(false); }
+      };
+
+      const AIModal = () => (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center modal-backdrop" onClick={() => setShowAIModal(false)}>
+              <div className="bg-white w-[95%] max-w-sm p-5 fade-in ticket-box" onClick={e => e.stopPropagation()}>
+                  <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-xl flex items-center gap-2"><Icons.Sparkles size={24} className="text-[#F48FB1]"/> AI 助手</h3><button onClick={() => setShowAIModal(false)}><Icons.X size={24}/></button></div>
+                  <div className="space-y-4">
+                      <div><label className="text-sm font-bold text-gray-500">地點 / 城市</label><input value={aiInput1} onChange={e => setAiInput1(e.target.value)} className="w-full bg-gray-50 border p-2 font-bold dashed-input" /></div>
+                      <div><label className="text-sm font-bold text-gray-500">{aiType === 'itinerary' ? '風格 / 主題' : '想吃什麼？'}</label><input value={aiInput2} onChange={e => setAiInput2(e.target.value)} className="w-full bg-gray-50 border p-2 font-bold dashed-input" placeholder={aiType === 'itinerary' ? '例如: 古蹟巡禮, 輕鬆逛街' : '例如: 拉麵, 燒肉, 甜點'} /></div>
+                      <button onClick={handleAIGenerate} disabled={isGenerating} className="w-full bg-[#F48FB1] text-white py-3 font-bold flex justify-center items-center gap-2 shadow-md rounded-xl">{isGenerating ? <Icons.Loader className="loading-spin"/> : <Icons.Sparkles/>} {isGenerating ? '生成中...' : '開始生成'}</button>
+                  </div>
+              </div>
+          </div>
+      );
+
+      const triggerFileAction = (type, id = null) => { setScanType(type); setTargetDayId(id); fileInputRef.current.click(); };
+      const addDay = () => { const newId = Date.now(); let nextDate = new Date(); if (itinerary.length > 0) { const lastDate = new Date(itinerary[itinerary.length - 1].date); lastDate.setDate(lastDate.getDate() + 1); nextDate = lastDate; } else if (budgetSettings.startDate) { nextDate = new Date(budgetSettings.startDate); } const dateStr = nextDate.toISOString().split('T')[0]; const newDay = { id: newId, date: dateStr, weekday: getWeekday(dateStr), content: '', transport: '', stay: '', food: '', highlights: '', photo: null, schedule: [] }; setItinerary([...itinerary, newDay]); setTimeout(() => scrollToDay(itinerary.length), 100); };
+      const removeDay = (id) => { if(confirm('確定要刪除這一天嗎？')) setItinerary(itinerary.filter(d => d.id !== id)); };
+      
+      const updateItinerary = (id, field, value) => { setItinerary(itinerary.map(item => item.id === id ? { ...item, [field]: value } : item)); };
+      const addScheduleItem = (dayId) => { const newScheduleItem = { id: Date.now(), time: '09:00', category: '景點', activity: '', note: '' }; setItinerary(itinerary.map(day => day.id === dayId ? { ...day, schedule: [...(day.schedule || []), newScheduleItem] } : day)); };
+      const updateScheduleItem = (dayId, itemId, field, value) => { setItinerary(itinerary.map(day => day.id === dayId ? { ...day, schedule: day.schedule.map(item => item.id === itemId ? { ...item, [field]: value } : item) } : day)); };
+      const removeScheduleItem = (dayId, itemId) => { if(!confirm('刪除此行程節點？')) return; setItinerary(itinerary.map(day => day.id === dayId ? { ...day, schedule: day.schedule.filter(item => item.id !== itemId) } : day)); };
+      const moveScheduleItem = (dayId, itemId, direction) => { const dayIndex = itinerary.findIndex(d => d.id === dayId); if (dayIndex === -1) return; const day = itinerary[dayIndex]; const itemIndex = day.schedule.findIndex(i => i.id === itemId); if (itemIndex === -1) return; const newSchedule = [...day.schedule]; if (direction === 'up' && itemIndex > 0) { [newSchedule[itemIndex], newSchedule[itemIndex - 1]] = [newSchedule[itemIndex - 1], newSchedule[itemIndex]]; } else if (direction === 'down' && itemIndex < newSchedule.length - 1) { [newSchedule[itemIndex], newSchedule[itemIndex + 1]] = [newSchedule[itemIndex + 1], newSchedule[itemIndex]]; } const newItinerary = [...itinerary]; newItinerary[dayIndex] = { ...day, schedule: newSchedule }; setItinerary(newItinerary); };
+
+      const mapScheduleCategoryToExpense = (scheduleCat) => { if (scheduleCat === '吃飯') return '🍜 飲食'; if (scheduleCat === '交通') return '🚃 交通'; if (scheduleCat === '逛街') return '🛍️ 購物'; if (scheduleCat === '住宿') return '🏨 住宿'; if (scheduleCat === '景點') return '🎫 門票'; return '📝 其他'; };
+
+      const linkScheduleToExpense = (dayId, itemId) => {
+          const day = itinerary.find(d => d.id === dayId); const item = day.schedule.find(i => i.id === itemId);
+          if (item.expenseId) { if(confirm('⚠️ 此行程已記帳，要刪除該筆帳目嗎？')) { setExpenses(expenses.filter(e => e.id !== item.expenseId)); updateScheduleItem(dayId, itemId, 'expenseId', null); } return; }
+          setNewExpense({ id: Date.now(), date: day.date, item: item.activity, amount: '', currency: 'JPY', category: mapScheduleCategoryToExpense(item.category), method: paymentMethods[0], platform: bookingPlatforms[0], note: item.note, source: 'itinerary', sourceDayId: dayId, sourceScheduleId: itemId }); setShowExpenseModal(true);
+      };
+
+      const handleEditExpense = (expense) => { setNewExpense({ ...expense }); setEditingExpenseId(expense.id); setShowExpenseModal(true); }
+      const handleDirectAddExpense = () => { if (!newExpense.item || !newExpense.amount) return; setExpenses([...expenses, { id: Date.now(), ...newExpense, amount: parseFloat(newExpense.amount) }]); setNewExpense({ ...newExpense, item: '', amount: '' }); };
+      const handleSaveExpense = () => { if (!newExpense.item || !newExpense.amount) return; if (editingExpenseId) { setExpenses(expenses.map(e => e.id === editingExpenseId ? { ...newExpense, id: editingExpenseId, amount: parseFloat(newExpense.amount) } : e)); setEditingExpenseId(null); } else { const expenseId = Date.now(); const expenseEntry = { ...newExpense, id: expenseId, amount: parseFloat(newExpense.amount) }; setExpenses([...expenses, expenseEntry]); if (newExpense.source === 'itinerary' && newExpense.sourceDayId && newExpense.sourceScheduleId) { updateScheduleItem(newExpense.sourceDayId, newExpense.sourceScheduleId, 'expenseId', expenseId); } } setNewExpense({ date: itinerary[0]?.date || '', item: '', amount: '', currency: 'JPY', category: '🍜 飲食', method: paymentMethods[0], platform: bookingPlatforms[0], note: '', source: null, sourceDayId: null, sourceScheduleId: null }); setShowExpenseModal(false); };
+      const handleDeleteExpense = (id) => { if (confirm('確定要刪除這筆記錄嗎？')) { setExpenses(expenses.filter(e => e.id !== id)); const linkedShopItem = shoppingList.find(s => s.expenseId === id); if(linkedShopItem) setShoppingList(shoppingList.map(s => s.id === linkedShopItem.id ? { ...s, bought: false, expenseId: null } : s)); setItinerary(itinerary.map(day => ({ ...day, schedule: day.schedule.map(s => s.expenseId === id ? { ...s, expenseId: null } : s) }))); } };
+
+      const handleAddShoppingItem = () => { if (!newShopItem.item) return; setShoppingList([...shoppingList, { id: Date.now(), ...newShopItem, budget: parseFloat(newShopItem.budget) || 0, splitCount: parseInt(newShopItem.splitCount) || 1, bought: false, photo: null }]); setNewShopItem({ item: '', budget: '', store: '', priority: 'high', type: 'self', note: '', splitCount: 1, photo: null }); };
+      const handleShoppingItemClick = (item) => { if (item.bought) { toggleShoppingItem(item.id, null); } else { setTempBuyId(item.id); setTempBuyDate(budgetSettings.startDate || new Date().toISOString().split('T')[0]); setShowBuyDateModal(true); } };
+      const confirmBuyItem = () => { if (tempBuyId && tempBuyDate) { toggleShoppingItem(tempBuyId, tempBuyDate); setShowBuyDateModal(false); setTempBuyId(null); } };
+      const toggleShoppingItem = (id, selectedDate) => { const item = shoppingList.find(i => i.id === id); if (!item) return; const isBuying = !item.bought; let newExpenseId = item.expenseId; let updatedExpenses = [...expenses]; if (isBuying && selectedDate) { newExpenseId = Date.now(); updatedExpenses.push({ id: newExpenseId, date: selectedDate, item: item.item, amount: item.budget, currency: 'JPY', category: '🛍️ 購物', method: paymentMethods[0], source: 'shopping', sourceId: id, note: `[戰利品連動] ${item.type === 'agent' ? '代購: '+item.note : ''}` }); alert(`✅ 已自動加入記帳！`); } else if (newExpenseId) { updatedExpenses = updatedExpenses.filter(e => e.id !== newExpenseId); newExpenseId = null; } setExpenses(updatedExpenses); setShoppingList(shoppingList.map(i => i.id === id ? { ...i, bought: isBuying, expenseId: newExpenseId } : i)); };
+      const deleteShoppingItem = (id) => { if (confirm('確定刪除？')) setShoppingList(shoppingList.filter(i => i.id !== id)); };
+
+      const togglePackingItem = (id) => setPackingList(packingList.map(item => item.id === id ? { ...item, checked: !item.checked } : item));
+      const addPackingItemToCategory = (category) => { if(!newPackingItemText) return; setPackingList([...packingList, { id: Date.now(), category: category, item: newPackingItemText, checked: false }]); setNewPackingItemText(''); setActivePackingCategory(null); };
+      const deletePackingItem = (id) => setPackingList(packingList.filter(i => i.id !== id));
+      const addPackingCategory = () => { if(newCategoryName && !packingCategories.includes(newCategoryName)) { setPackingCategories([...packingCategories, newCategoryName]); setNewCategoryName(''); }};
+      const deletePackingCategory = (category) => { if(confirm(`確定刪除「${category}」？`)) { setPackingCategories(packingCategories.filter(c => c !== category)); setPackingList(packingList.filter(item => item.category !== category)); }};
+      
+      const updateItineraryDates = () => { if (!budgetSettings.startDate) return; const start = new Date(budgetSettings.startDate); const newItinerary = itinerary.map((item, index) => { const d = new Date(start); d.setDate(start.getDate() + index); return { ...item, date: d.toISOString().split('T')[0], weekday: getWeekday(d.toISOString().split('T')[0]) }; }); setItinerary(newItinerary); alert('行程日期已全部更新！'); };
+
+      const handleRestore = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const data = JSON.parse(event.target.result); if(data.itinerary) setItinerary(data.itinerary); if(data.expenses) setExpenses(data.expenses); if(data.shoppingList) setShoppingList(data.shoppingList); if(data.packingList) setPackingList(data.packingList); if(data.gourmetList) setGourmetList(data.gourmetList); if(data.budgetSettings) setBudgetSettings(data.budgetSettings); if(data.paymentMethods) setPaymentMethods(data.paymentMethods); if(data.bookingPlatforms) setBookingPlatforms(data.bookingPlatforms); alert("資料已成功還原！"); } catch (error) { console.error(error); alert("備份檔格式錯誤！"); } }; reader.readAsText(file); };
+
+      const exportToExcel = () => { const wb = XLSX.utils.book_new(); const wsExpenses = XLSX.utils.json_to_sheet(expenses.map(e => ({ Date: e.date, Item: e.item, Amount: e.amount, Currency: e.currency, Category: e.category, Method: e.method, Note: e.note }))); XLSX.utils.book_append_sheet(wb, wsExpenses, "Expenses"); const wsShopping = XLSX.utils.json_to_sheet(shoppingList.map(s => ({ Item: s.item, Budget: s.budget, Bought: s.bought ? "Yes" : "No", Type: s.type }))); XLSX.utils.book_append_sheet(wb, wsShopping, "Shopping"); XLSX.writeFile(wb, "Travel_Plan_2026.xlsx"); setShowExportModal(false); };
+      const exportToWord = () => { let htmlContent = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>2026大關西散策</title><style>body { font-family: 'Microsoft JhengHei', sans-serif; } h1 { color: #F48FB1; text-align: center; } h2 { background: #eee; padding: 5px; border-left: 5px solid #F48FB1; } table { width: 100%; border-collapse: collapse; margin-bottom: 20px; } th, td { border: 1px solid #ddd; padding: 8px; text-align: left; } th { background-color: #f2f2f2; }</style></head><body><h1>2026大關西散策 - 旅遊手帳</h1>`; itinerary.forEach(day => { htmlContent += `<h2>${formatDate(day.date)} (${getWeekday(day.date)}) - ${day.transport}</h2><table><thead><tr><th width="15%">時間</th><th width="30%">活動</th><th>備註</th></tr></thead><tbody>`; day.schedule.forEach(item => { htmlContent += `<tr><td>${item.time}</td><td>${item.activity}</td><td>${item.note}</td></tr>`; }); htmlContent += `</tbody></table>`; }); if (accommodations.length > 0) { htmlContent += `<h2>🏨 住宿資訊</h2>`; accommodations.forEach(h => { htmlContent += `<p><strong>${h.name}</strong><br/>地址: ${h.address}<br/>備註: ${h.note}</p><hr/>`; }); } htmlContent += `</body></html>`; const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'Travel_Booklet_2026.doc'; document.body.appendChild(link); link.click(); document.body.removeChild(link); };
+
+      const handleAddHotel = () => { if(!newHotel.name) return; setAccommodations([...accommodations, { id: Date.now(), ...newHotel }]); setNewHotel({ name: '', address: '', note: '', date: budgetSettings.startDate || '' }); setShowAddHotel(false); };
+      const handleDeleteHotel = (id) => setAccommodations(accommodations.filter(a => a.id !== id));
+      const handleAddReserv = () => { if(!newReserv.title) return; setReservations([...reservations, { id: Date.now(), ...newReserv }]); setNewReserv({ title: '', time: '', code: '' }); setShowAddReserv(false); };
+      const handleDeleteReserv = (id) => setReservations(reservations.filter(r => r.id !== id));
+      const handleAddGourmet = () => { if(!newGourmet.name) return; setGourmetList([...gourmetList, { id: Date.now(), ...newGourmet }]); setNewGourmet({ name: '', city: '大阪', location: '', photo: null, note: '' }); setShowAddGourmet(false); };
+      const handleDeleteGourmet = (id) => setGourmetList(gourmetList.filter(g => g.id !== id));
+
+      const handleBatchImport = () => { 
+          if (!batchText) return; 
+          const lines = batchText.split('\n').map(l => l.trim()).filter(l => l); 
+          if (batchType === 'packing') { 
+              const category = batchTargetCategory || '未分類';
+              setPackingList([...packingList, ...lines.map(l => ({ id: Date.now() + Math.random(), category: category, item: l, checked: false }))]); 
+          } else if (batchType === 'shopping') { 
+              setShoppingList([...shoppingList, ...lines.map(l => ({ id: Date.now() + Math.random(), item: l, budget: 0, bought: false, store: '', priority: 'medium', type: 'self', note: '', splitCount: 1, photo: null }))]); 
+          } 
+          setBatchText(''); setShowBatchModal(false); setBatchTargetCategory(null);
+      };
+
+      const BuyDateModal = () => ( <div className="fixed inset-0 z-[70] flex items-center justify-center modal-backdrop" onClick={() => setShowBuyDateModal(false)}> <div className="bg-white w-[95%] max-w-sm p-5 fade-in shadow-2xl ticket-box" onClick={e => e.stopPropagation()}> <h3 className="font-bold text-2xl text-gray-800 mb-4 text-center">📅 什麼時候買的？</h3> <div className="mb-4"><label className="text-sm font-bold text-gray-500 ml-1">選擇購買日期</label><input type="date" value={tempBuyDate} onChange={e => setTempBuyDate(e.target.value)} className="w-full p-3 outline-none font-bold text-2xl text-center text-[#F48FB1] dashed-input"/></div> <button onClick={confirmBuyItem} className="w-full bg-[#F48FB1] text-white py-3 font-bold text-xl shadow-lg active:scale-95 transition-transform rounded-xl">確認記帳</button> </div> </div> );
+      const SettingsModal = () => {
+          const [newMethodName, setNewMethodName] = useState(''); const [newPlatformName, setNewPlatformName] = useState('');
+          const addMethod = () => { if(newMethodName && !paymentMethods.includes(newMethodName)) { setPaymentMethods([...paymentMethods, newMethodName]); setNewMethodName(''); } };
+          const removeMethod = (m) => { if(confirm('刪除此支付方式？')) setPaymentMethods(paymentMethods.filter(item => item !== m)); };
+          const addPlatform = () => { if(newPlatformName && !bookingPlatforms.includes(newPlatformName)) { setBookingPlatforms([...bookingPlatforms, newPlatformName]); setNewPlatformName(''); } };
+          const removePlatform = (p) => { if(confirm('刪除此預訂平台？')) setBookingPlatforms(bookingPlatforms.filter(item => item !== p)); };
+          return (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center modal-backdrop" onClick={() => setShowSettingsModal(false)}>
+                <div className="bg-white w-[95%] max-w-sm p-5 fade-in max-h-[85vh] overflow-y-auto ticket-box" onClick={e => e.stopPropagation()}>
+                    <h3 className="font-bold text-2xl text-gray-800 mb-4 text-center">⚙️ 設定</h3>
+                    <div className="space-y-3 mb-6"><div><label className="text-xs font-bold text-gray-500">出發日期</label><input type="date" value={budgetSettings.startDate} onChange={e => setBudgetSettings({...budgetSettings, startDate: e.target.value})} className="w-full bg-gray-100 p-2 font-bold text-lg dashed-input" /><button onClick={updateItineraryDates} className="mt-1 text-xs text-blue-500 font-bold underline">同步更新行程日期</button></div><div><label className="text-xs font-bold text-gray-500">總預算 (TWD)</label><input type="number" value={budgetSettings.totalTWD} onChange={e => setBudgetSettings({...budgetSettings, totalTWD: parseInt(e.target.value)})} className="w-full bg-gray-100 p-2 font-bold text-lg dashed-input" /></div><div><label className="text-xs font-bold text-gray-500">匯率 (JPY to TWD)</label><input type="number" step="0.001" value={budgetSettings.rates.JPY_TWD} onChange={e => setBudgetSettings({...budgetSettings, rates: {...budgetSettings.rates, JPY_TWD: parseFloat(e.target.value)}})} className="w-full bg-gray-100 p-2 font-bold text-lg dashed-input" /></div></div>
+                    <button onClick={() => { setShowSettingsModal(false); setShowBooklet(true); }} className="w-full mb-6 bg-[#2962FF] text-white py-3 font-bold flex justify-center items-center gap-2 rounded-xl shadow-md active:scale-95 transition-transform"><Icons.Book size={20}/> 📖 預覽 / 匯出旅遊小本本</button>
+                    <div className="border-t pt-4 mb-4"><h4 className="font-bold text-gray-700 mb-2 flex items-center gap-1"><Icons.Coins size={18}/> 💳 支付方式管理</h4><div className="flex gap-2 mb-2"><input value={newMethodName} onChange={e=>setNewMethodName(e.target.value)} placeholder="如: LINE Pay" className="flex-1 bg-gray-50 border px-2 py-1 text-sm dashed-input" /><button onClick={addMethod} className="bg-[#FF9F43] text-white px-3 text-sm font-bold rounded-lg">新增</button></div><div className="flex flex-wrap gap-2">{paymentMethods.map(m => (<span key={m} className="bg-orange-50 text-orange-600 px-2 py-1 text-xs font-bold border border-orange-200 flex items-center gap-1 rounded-lg">{m} <button onClick={()=>removeMethod(m)} className="hover:text-red-500"><Icons.X size={10}/></button></span>))}</div></div>
+                    <div className="border-t pt-4 mb-6"><h4 className="font-bold text-gray-700 mb-2 flex items-center gap-1"><Icons.Ticket size={18}/> 📱 預訂平台管理</h4><div className="flex gap-2 mb-2"><input value={newPlatformName} onChange={e=>setNewPlatformName(e.target.value)} placeholder="如: KKday" className="flex-1 bg-gray-50 border px-2 py-1 text-sm dashed-input" /><button onClick={addPlatform} className="bg-[#4ECDC4] text-white px-3 text-sm font-bold rounded-lg">新增</button></div><div className="flex flex-wrap gap-2">{bookingPlatforms.map(p => (<span key={p} className="bg-teal-50 text-teal-600 px-2 py-1 text-xs font-bold border border-teal-200 flex items-center gap-1 rounded-lg">{p} <button onClick={()=>removePlatform(p)} className="hover:text-red-500"><Icons.X size={10}/></button></span>))}</div></div>
+                    <div className="flex gap-2"><button onClick={() => { const data = JSON.stringify({ itinerary, expenses, shoppingList, packingList, budgetSettings, paymentMethods, bookingPlatforms }); const blob = new Blob([data], {type: 'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'backup.json'; a.click(); }} className="flex-1 bg-gray-200 py-2 font-bold text-gray-600 rounded-lg">備份</button><button onClick={() => backupInputRef.current.click()} className="flex-1 bg-gray-200 py-2 font-bold text-gray-600 rounded-lg">還原</button></div>
+                    <button onClick={() => setShowExportModal(true)} className="w-full mt-2 bg-[#207245] text-white py-2 font-bold flex justify-center items-center gap-2 rounded-lg"><Icons.FileSpreadsheet size={16}/> 匯出 Excel</button>
+                    <button onClick={() => setShowSettingsModal(false)} className="w-full mt-4 bg-[#F48FB1] text-white py-3 font-bold text-lg rounded-xl shadow-md">完成</button>
+                </div>
+            </div>
+          );
+      };
+
+      const ExpenseModal = () => (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center modal-backdrop" onClick={() => setShowExpenseModal(false)}>
+          <div className="bg-white w-[95%] max-w-sm p-5 fade-in ticket-box" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-2xl text-gray-800 mb-4 text-center">{editingExpenseId ? '✏️ 修改帳目' : '💸 記一筆'}</h3>
+            <div className="space-y-3">
+                <input type="text" placeholder="項目" value={newExpense.item} onChange={e => setNewExpense({...newExpense, item: e.target.value})} className="w-full bg-gray-50 border-b-2 border-gray-200 p-2 font-bold text-lg outline-none dashed-input" />
+                <div className="flex items-center w-full dashed-input overflow-hidden px-2 bg-[#FAFAFA]">
+                    <input type="text" placeholder="金額" value={newExpense.amount} readOnly onClick={() => { setCalcTarget('expense'); setShowCalculator(true); }} className="flex-1 bg-transparent border-none outline-none text-2xl font-black text-[#F57C00] h-12 cursor-pointer text-right pr-2" />
+                    <div className="w-[1px] h-8 bg-gray-300 mx-1"></div>
+                    <select value={newExpense.currency} onChange={e => setNewExpense({...newExpense, currency: e.target.value})} className="bg-transparent border-none outline-none font-bold text-xl w-36 text-center text-gray-600 appearance-none h-12">{CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select>
+                </div>
+                <div className="flex gap-2"><select value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value})} className="flex-1 bg-gray-50 p-2 text-sm font-bold dashed-input">{CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select><select value={newExpense.method} onChange={e => setNewExpense({...newExpense, method: e.target.value})} className="flex-1 bg-gray-50 p-2 text-sm font-bold dashed-input">{paymentMethods.map(m => <option key={m} value={m}>{m}</option>)}</select></div>
+                <div className="flex flex-col gap-1"><label className="text-xs font-bold text-gray-500 ml-1">預訂平台 (如適用)</label><select value={newExpense.platform} onChange={e => setNewExpense({...newExpense, platform: e.target.value})} className="w-full bg-gray-50 p-2 text-sm font-bold dashed-input"><option value="">無 / 現場</option>{bookingPlatforms.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+                <button onClick={handleSaveExpense} className="w-full bg-[#F57C00] text-white py-3 font-bold text-lg shadow-md mt-4 rounded-xl">{editingExpenseId ? '💾 儲存修改' : '儲存'}</button>
+            </div>
+          </div>
+          <CalculatorModal isOpen={showCalculator && calcTarget === 'expense'} onClose={() => setShowCalculator(false)} onConfirm={(val) => setNewExpense(prev => ({ ...prev, amount: val }))} initialValue={newExpense.amount} />
+        </div>
+      );
+
+      const BatchModal = () => ( 
+        <div className="fixed inset-0 z-[60] flex items-center justify-center modal-backdrop" onClick={() => setShowBatchModal(false)}> 
+            <div className="bg-white w-[95%] max-w-sm p-5 fade-in ticket-box" onClick={e => e.stopPropagation()}> 
+                <h3 className="font-bold text-xl mb-2">
+                    {batchType === 'packing' 
+                        ? `匯入至「${batchTargetCategory || '未分類'}」` 
+                        : '批次匯入購物清單'}
+                </h3> 
+                <p className="text-xs text-gray-400 mb-2">一行一個項目</p> 
+                <textarea value={batchText} onChange={e => setBatchText(e.target.value)} className="w-full h-40 bg-gray-50 border p-2 mb-4 font-bold dashed-input" placeholder="例如：&#10;護照&#10;充電器"></textarea> 
+                <button onClick={handleBatchImport} className="w-full bg-blue-500 text-white py-3 font-bold rounded-xl">開始匯入</button> 
+            </div> 
+        </div> 
+      );
+      
+      const TabButton = ({ id, IconComp, label, bgColor, activeColor }) => ( <button onClick={() => setActiveTab(id)} className={`flex flex-col items-center justify-end h-full transition-all duration-300 ${activeTab === id ? '-translate-y-3' : ''}`}> <div className={`p-3 shadow-lg border-2 border-black transition-all ${activeTab === id ? 'scale-110' : 'scale-100 opacity-80'}`} style={{ backgroundColor: activeTab === id ? activeColor : bgColor, color: activeTab === id ? 'white' : '#546E7A', borderRadius: '50%' }}> <IconComp size={24} strokeWidth={3} /> </div> <span className={`text-[10px] font-bold mt-1 bg-white/80 px-2 rounded ${activeTab === id ? 'text-gray-800' : 'text-gray-400'}`}>{label}</span> </button> );
+      const FloatingActionButton = () => ( <div className="absolute bottom-6 right-4 flex flex-col gap-2"> <button onClick={() => setShowBooklet(true)} className="w-12 h-12 bg-white shadow-lg flex items-center justify-center border-2 border-gray-200 text-gray-600 active:scale-90 transition-transform rounded-full"><Icons.Book size={20}/></button> </div> );
+      const TravelBooklet = () => { if (!showBooklet) return null; return ReactDOM.createPortal( <div className="fixed inset-0 bg-white z-[9999] overflow-y-auto" id="booklet-root"> <div className="p-8 max-w-4xl mx-auto print:p-0"> <div className="flex justify-between items-center mb-8 print-hidden"> <div className="flex items-center gap-4"> <h1 className="text-xl sm:text-2xl font-bold">🖨️ 列印 / 匯出預覽</h1> <span className="text-[10px] sm:text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded">💡 小提示：點擊下方文字可直接修改內容！</span> </div> <div className="flex gap-2"> <button onClick={exportToWord} className="bg-[#2962FF] text-white px-3 py-2 rounded-lg font-bold flex items-center gap-1 text-sm"><Icons.Word size={16}/> 下載 Word</button> <button onClick={() => window.print()} className="bg-[#455A64] text-white px-3 py-2 rounded-lg font-bold flex items-center gap-1 text-sm"><Icons.Printer size={16}/> 列印</button> <button onClick={() => setShowBooklet(false)} className="bg-gray-200 px-3 py-2 rounded-lg font-bold text-sm">關閉</button> </div> </div> <div className="border-4 border-black p-4 sm:p-8 mb-8 text-center bg-[#FCE4EC] rounded-3xl avoid-break ticket-box"> <h1 className="text-4xl sm:text-6xl font-black mb-4 tracking-widest text-[#880E4F] banner-font" contentEditable suppressContentEditableWarning>大關西散策<br/>2026</h1> <div className="text-xl sm:text-2xl font-bold text-gray-600" contentEditable suppressContentEditableWarning>TRAVEL ITINERARY</div> </div> {itinerary.map((day) => ( <div key={day.id} className="mb-8 avoid-break border-2 border-gray-200 p-3 sm:p-4 ticket-box"> <h2 className="text-2xl sm:text-3xl font-bold mb-4 border-b-2 border-black pb-2 flex justify-between flex-wrap"> <span contentEditable suppressContentEditableWarning>{formatDate(day.date)} <small>({getWeekday(day.date)})</small></span> <span className="text-base sm:text-lg text-gray-500" contentEditable suppressContentEditableWarning>{day.transport}</span> </h2> <table className="w-full text-left"> <thead><tr className="border-b"><th className="pb-2 w-16 sm:w-20 text-sm sm:text-base">時間</th><th className="pb-2 text-sm sm:text-base">活動</th><th className="pb-2 text-sm sm:text-base">備註</th></tr></thead> <tbody> {day.schedule.map(s => ( <tr key={s.id} className="border-b border-dashed border-gray-200"> <td className="py-2 font-mono font-bold text-sm sm:text-base" contentEditable suppressContentEditableWarning>{s.time}</td> <td className="py-2 font-bold text-sm sm:text-base" contentEditable suppressContentEditableWarning>{s.activity}</td> <td className="py-2 text-xs sm:text-sm text-gray-500" contentEditable suppressContentEditableWarning>{s.note}</td> </tr> ))} </tbody> </table> </div> ))} <div className="page-break"></div> <div className="avoid-break"> <h2 className="text-3xl font-bold mb-4 border-b-2 border-black pb-2">住宿資訊</h2> {accommodations.map(h => ( <div key={h.id} className="mb-4 border p-2 rounded ticket-box"> <div className="font-bold text-xl" contentEditable suppressContentEditableWarning>{h.name}</div> <div className="text-sm" contentEditable suppressContentEditableWarning>{h.address}</div> <div className="text-sm text-gray-500" contentEditable suppressContentEditableWarning>{h.note}</div> </div> ))} </div> </div> </div>, document.body ); };
+
+      return (
+        <div className="flex flex-col h-full bg-white w-full max-w-4xl mx-auto shadow-2xl overflow-hidden relative font-sans text-gray-900">
+          {showBooklet && <TravelBooklet />}
+          {showBuyDateModal && <BuyDateModal />}
+          {showSettingsModal && <SettingsModal />}
+          {showExpenseModal && <ExpenseModal />}
+          {showAIModal && <AIModal />}
+          {showExportModal && <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop" onClick={() => setShowExportModal(false)}><div className="bg-white w-[95%] max-w-sm p-6 fade-in ticket-box" onClick={e => e.stopPropagation()}><h3 className="font-bold text-2xl text-gray-800 mb-4 text-center">📊 匯出 Excel</h3><button onClick={exportToExcel} className="w-full bg-[#207245] text-white font-bold text-xl py-4 border-2 border-black flex justify-center items-center gap-2 mb-2 rounded-xl"><Icons.FileSpreadsheet size={24} /> 下載報表</button><button onClick={() => setShowExportModal(false)} className="w-full text-gray-500 font-bold py-3 text-lg">取消</button></div></div>}
+          {showBatchModal && <BatchModal />}
+          {isScanning && <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 text-white"><Icons.Loader size={60} className="loading-spin mb-4 text-[#F48FB1]" /><div className="text-3xl font-bold animate-pulse">處理中...</div></div>}
+          <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
+          <input type="file" accept=".json" ref={backupInputRef} onChange={handleRestore} className="hidden" />
+
+          <div className="safe-area-top"></div>
+          <div className="bg-[#F48FB1] px-4 py-2 relative overflow-hidden border-b-2 border-black shrink-0 z-50">
+            <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                    <AppIcon />
+                    <h1 className="text-xl sm:text-2xl text-white tracking-widest font-black">大關西散策2026</h1>
+                </div>
+                <div className="flex items-center gap-3"><WeatherWidget /><button onClick={() => setShowSettingsModal(true)} className="text-white hover:text-gray-100 bg-white/20 p-1.5 rounded-full"><Icons.Settings size={24} /></button></div>
+            </div>
+            <div className="absolute inset-0 pointer-events-none overflow-hidden h-full z-0"><div className="snowflake" style={{left: '10%', animationDuration: '5s', animationDelay: '0s'}}>❄</div><div className="snowflake" style={{left: '30%', animationDuration: '7s', animationDelay: '1s'}}>❄</div><div className="snowflake" style={{left: '50%', animationDuration: '4s', animationDelay: '2s'}}>❄</div><div className="snowflake" style={{left: '70%', animationDuration: '6s', animationDelay: '0.5s'}}>❄</div><div className="snowflake" style={{left: '90%', animationDuration: '8s', animationDelay: '1.5s'}}>❄</div></div>
+            <div className="flex justify-between mt-1 text-white opacity-80 z-10 select-none overflow-hidden whitespace-nowrap px-1">{[1,2,3,4,5,6,7].map(i=><span key={i} className="animate-cute-bounce" style={{animationDelay:`${i*0.2}s`}}>⛄</span>)}</div>
+          </div>
+
+          <div className="flex-1 overflow-hidden relative bg-[#E0F7FA]">
+            {activeTab === 'itinerary' && (
+              <div className="h-full flex flex-col p-4">
+                <div className="flex gap-3 overflow-x-auto no-scrollbar mb-3 shrink-0 py-1">{(itinerary || []).map((day, index) => (<button key={day.id} onClick={() => scrollToDay(index)} className={`shrink-0 w-12 h-12 font-bold text-lg border-2 border-black shadow-md flex items-center justify-center transition-all ${currentDayIndex === index ? 'scale-110 ring-2 ring-black' : 'opacity-70'}`} style={{ backgroundColor: BUTTON_COLORS[index % BUTTON_COLORS.length], color: 'white', borderRadius: '50%' }}>{formatDate(day.date)}</button>))} <button onClick={addDay} className="shrink-0 w-12 h-12 bg-white border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-400 hover:text-[#F48FB1] rounded-full"><Icons.Plus size={24}/></button></div>
+                <div ref={dayScrollRef} className="flex-1 flex overflow-x-auto snap-x-mandatory no-scrollbar gap-4 h-full" onScroll={(e) => { const index = Math.round(e.target.scrollLeft / e.target.offsetWidth); setCurrentDayIndex(index); }}>
+                    {(itinerary || []).map((day, index) => {
+                        const dayTotal = getDailyTotal(day.date);
+                        return (
+                            <div key={day.id} className="w-full shrink-0 snap-center flex flex-col h-full">
+                                <div className="bg-white border-2 border-black shadow-xl flex flex-col relative h-full overflow-hidden ticket-box">
+                                    <div className="bg-[#FFF8E1] border-b-2 border-dashed border-gray-300 p-3 flex justify-between items-center shrink-0">
+                                        <div className="flex items-center gap-2"><span className="font-black text-2xl sm:text-3xl text-gray-800">{formatDate(day.date)}</span><span className="text-lg sm:text-xl font-bold text-gray-400">({getWeekday(day.date)})</span></div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => openAIPlanner(day.id)} className="p-2 sparkle-btn shadow active:translate-y-1 flex items-center gap-1 font-bold text-xs rounded-xl"><Icons.Sparkles size={16}/> AI 規劃</button>
+                                            <button onClick={() => triggerFileAction('itineraryImport', day.id)} className="p-2 bg-[#B2DFDB] text-[#00695C] border border-black shadow active:translate-y-1 flex items-center gap-1 font-bold text-xs rounded-xl"><Icons.ListPlus size={16}/> 匯入</button>
+                                            <button onClick={() => triggerFileAction('photo', day.id)} className="p-2 bg-[#E1BEE7] text-[#9C27B0] border border-black shadow active:translate-y-1 rounded-full"><Icons.Camera size={18}/></button>
+                                            <button onClick={() => removeDay(day.id)} className="p-2 bg-gray-100 text-gray-500 border border-gray-300 hover:text-red-500 rounded-lg"><Icons.Trash2 size={18}/></button>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4 paper-texture">
+                                        <div className="bg-white/90 p-3 border-2 border-gray-100 shadow-sm ticket-box">
+                                            <div className="flex justify-between items-center mb-2"><div className="flex items-center gap-2 text-[#0097A7] font-bold text-lg"><Icons.Clock size={24}/> 詳細行程</div><button onClick={() => addScheduleItem(day.id)} className="text-[#0097A7] bg-[#E0F7FA] px-2 py-1 text-sm font-bold border border-[#B2EBF2] rounded-lg">+ 新增</button></div>
+                                            <div className="space-y-4 mt-4">{day.schedule && day.schedule.map(item => ( <div key={item.id} className={`relative flex gap-2 items-start bg-white p-3 border border-gray-300 transition-all rounded-lg ${editingScheduleId === item.id ? 'scale-105 shadow-lg border-[#F48FB1] bg-red-50 z-10' : ''}`} onTouchStart={() => { const t = setTimeout(() => setEditingScheduleId(item.id), 500); item.timer = t; }} onTouchEnd={() => clearTimeout(item.timer)} onMouseDown={() => { const t = setTimeout(() => setEditingScheduleId(item.id), 500); item.timer = t; }} onMouseUp={() => clearTimeout(item.timer)}> <div className="washi-tape"></div> <div className="flex flex-col gap-1 items-center shrink-0"> <input value={item.time} onChange={(e) => updateScheduleItem(day.id, item.id, 'time', e.target.value)} className="w-14 bg-white border border-gray-300 p-1 text-sm font-bold text-center outline-none rounded" type="time" /> {editingScheduleId === item.id && (<div className="flex flex-col gap-1 mt-1"><button onClick={() => moveScheduleItem(day.id, item.id, 'up')} className="bg-gray-200 p-1 rounded hover:bg-gray-300"><Icons.ArrowUp size={12}/></button><button onClick={() => moveScheduleItem(day.id, item.id, 'down')} className="bg-gray-200 p-1 rounded hover:bg-gray-300"><Icons.ArrowDown size={12}/></button><button onClick={() => setEditingScheduleId(null)} className="text-[10px] text-blue-500 font-bold">完成</button></div>)} </div> <div className="flex-1 flex flex-col gap-2 min-w-0"> <div className="flex gap-2"> <select value={item.category} onChange={(e) => updateScheduleItem(day.id, item.id, 'category', e.target.value)} className="bg-white border border-gray-300 p-1 text-xs font-bold w-20 outline-none shrink-0 rounded">{SCHEDULE_CATEGORIES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}</select> <input value={item.activity} onChange={(e) => updateScheduleItem(day.id, item.id, 'activity', e.target.value)} className="flex-1 bg-transparent border-b-2 border-dashed border-gray-300 outline-none text-base font-bold text-gray-800 min-w-0" placeholder="做什麼..." /> </div> <div className="flex gap-2 items-center"> <input value={item.note} onChange={(e) => updateScheduleItem(day.id, item.id, 'note', e.target.value)} className="flex-1 bg-transparent outline-none text-xs text-gray-500 bg-white/50 px-1 min-w-0 rounded" placeholder="備註..." /> {item.expenseId ? ( <div className="stamp-animation border-2 border-red-500 text-red-500 text-[10px] font-black px-1 transform -rotate-12 rounded opacity-80 cursor-pointer hover:bg-red-50" onClick={(e) => { e.stopPropagation(); linkScheduleToExpense(day.id, item.id); }}> PAID </div> ) : ( <button onClick={(e) => { e.stopPropagation(); linkScheduleToExpense(day.id, item.id); }} className="bg-[#FFF3E0] text-[#E65100] border border-[#FFE0B2] px-2 py-1 rounded text-xs font-bold shadow-sm hover:bg-[#FFE0B2] flex items-center gap-1 active:scale-95 transition-transform shrink-0"> <Icons.Coins size={14}/> 記帳 </button> )} <button onClick={() => removeScheduleItem(day.id, item.id)} className="text-gray-300 hover:text-red-400 shrink-0"><Icons.Trash2 size={16}/></button> </div> </div> </div> ))}</div>
+                                        </div>
+                                        <div className="flex gap-3"><div className="flex-1 bg-white/90 p-2 border-2 border-gray-100 shadow-sm rounded-xl"><div className="flex items-center gap-1 text-[#455A64] font-bold text-sm mb-1"><Icons.Train size={18}/> 交通</div><input value={day.transport} onChange={(e) => updateItinerary(day.id, 'transport', e.target.value)} className="w-full bg-transparent p-1 text-base font-bold outline-none text-gray-700" placeholder="搭車..." /></div><div className="flex-1 bg-white/90 p-2 border-2 border-gray-100 shadow-sm rounded-xl"><div className="flex items-center gap-1 text-[#5C6BC0] font-bold text-sm mb-1"><Icons.Home size={18}/> 住宿</div><input value={day.stay} onChange={(e) => updateItinerary(day.id, 'stay', e.target.value)} className="w-full bg-transparent p-1 text-base font-bold outline-none text-gray-700" placeholder="飯店..." /></div></div>
+                                        <div className="bg-[#FFF8E1] p-3 border-2 border-[#FFE0B2] shadow-sm ticket-box"><div className="flex justify-between items-center mb-2"><div className="flex items-center gap-2 text-[#F57C00] font-bold text-lg"><Icons.Coins size={22}/> 本日帳本</div><span className="text-sm font-black text-[#F57C00]">${dayTotal.toLocaleString()}</span></div><div className="space-y-1 mb-2">{expenses.filter(e => e.date === day.date).map(e => (<div key={e.id} className="flex justify-between text-xs text-gray-600 border-b border-dashed border-gray-300 pb-1"><span>{e.item}</span><span className="font-bold">{CURRENCIES.find(c => c.code === e.currency)?.symbol}{e.amount}</span></div>))}</div><button onClick={() => { setNewExpense({...newExpense, date: day.date}); setShowExpenseModal(true); }} className="w-full bg-[#FF9F43] text-white py-2 font-bold text-sm shadow-sm active:scale-95 transition-transform rounded-xl">+ 記一筆</button></div>
+                                        <div className="pt-1"><div className="flex items-center gap-2 text-gray-500 font-bold text-sm mb-2"><Icons.Camera size={18}/> 打卡 / 照片日記</div><div onClick={() => triggerFileAction('photo', day.id)} className="w-full h-40 border-4 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-white/50 overflow-hidden relative bg-white/30 group transition-all rounded-xl">{day.photo ? <img src={day.photo} alt="Daily" className="w-full h-full object-cover" /> : <div className="flex flex-col items-center text-gray-400 group-hover:text-[#F48FB1] transition-colors"><Icons.Image size={32}/><span className="text-xs font-bold mt-1">點擊上傳</span></div>}</div></div>
+                                    </div>
+                                    <div className="p-3 border-t-2 border-gray-100 bg-gray-50 flex justify-between items-center shrink-0"><button onClick={(e) => openGoogleMaps(e, day.content || day.schedule[0]?.activity || 'Japan')} className="w-full bg-[#E0F7FA] text-[#00BCD4] px-4 py-2 font-bold text-sm flex items-center justify-center gap-1 hover:bg-[#B2EBF2] border border-[#B2EBF2] rounded-xl"><Icons.Navigation size={16}/> Google Maps 導航</button></div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+                <FloatingActionButton />
+              </div>
+            )}
+
+            {activeTab === 'expenses' && (
+              <div className="h-full flex flex-col pt-4 overflow-hidden relative">
+                <div className="px-4 pb-2"><div className="bg-[#FFF8E1] p-3 border-2 border-[#FFE0B2] shadow-sm flex justify-between items-center ticket-box"><div><div className="text-xs text-[#F57C00] font-bold">總花費 (台幣)</div><div className="text-2xl font-black text-[#E65100]">${totalSpentConvertedTWD.toLocaleString()}</div></div><div className="text-right"><div className="text-xs text-[#F57C00] font-bold">約合日幣</div><div className="text-xl font-black text-[#FF9800]">¥{Math.round(totalSpentConvertedTWD / getExchangeRate('JPY')).toLocaleString()}</div></div></div></div>
+                <div className="px-4 mb-2"><div className="bg-white shadow-md border-2 border-[#F48FB1] p-3 rounded-2xl"><div className="flex gap-2 mb-2"><select value={newExpense.date} onChange={e => setNewExpense({...newExpense, date: e.target.value})} className="flex-1 bg-gray-50 p-2 outline-none text-sm font-bold border border-gray-200 dashed-input rounded-lg">{(itinerary || []).map(d => <option key={d.id} value={d.date}>{formatDate(d.date)} ({getWeekday(d.date)})</option>)}</select><button onClick={() => triggerFileAction('receipt')} className="bg-[#E0F2F1] text-[#00695C] w-12 h-10 border-2 border-[#80CBC4] shadow-sm active:scale-95 transition-transform flex items-center justify-center shrink-0 rounded-lg"><Icons.Camera size={20}/></button></div><div className="flex gap-2 mb-2"><select value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value})} className="bg-gray-50 p-2 outline-none text-sm font-bold w-1/3 border border-gray-200 dashed-input rounded-lg">{CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select><input type="text" placeholder="品項..." value={newExpense.item} onChange={e => setNewExpense({...newExpense, item: e.target.value})} className="flex-1 bg-transparent border-b-2 border-dashed border-gray-300 outline-none text-base font-bold text-gray-800 h-10 px-1" /></div><div className="flex gap-2 mb-2"><select value={newExpense.method} onChange={e => setNewExpense({...newExpense, method: e.target.value})} className="bg-gray-50 p-2 outline-none text-xs font-bold flex-1 border border-gray-200 text-gray-500 dashed-input rounded-lg">{paymentMethods.map(m => <option key={m} value={m}>{m}</option>)}</select><div className="relative flex-1"><select value={newExpense.platform} onChange={e => setNewExpense({...newExpense, platform: e.target.value})} className="w-full bg-gray-50 pl-2 pr-6 py-2 outline-none text-xs font-bold border border-gray-200 appearance-none h-10 dashed-input rounded-lg"><option value="">無 / 現場</option>{bookingPlatforms.map(p => <option key={p} value={p}>{p}</option>)}</select><button onClick={() => setShowSettingsModal(true)} className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 p-1"><Icons.Settings size={12}/></button></div></div><div className="flex gap-2 items-center"><div className="flex-1 flex items-center bg-gray-50 border-2 border-[#FFCCBC] px-2 h-12 rounded-xl overflow-hidden"><input type="text" placeholder="金額" value={newExpense.amount} readOnly onClick={() => { setCalcTarget('expense'); setShowCalculator(true); }} className="flex-1 bg-transparent border-none outline-none font-black text-xl text-[#E64A19] text-right pr-1 cursor-pointer" /><div className="w-[1px] h-6 bg-gray-300 mx-1"></div><select value={newExpense.currency} onChange={e => setNewExpense({...newExpense, currency: e.target.value})} className="bg-transparent outline-none font-bold text-xl w-36 text-center text-gray-700 appearance-none">{CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select></div><button onClick={handleDirectAddExpense} className="bg-[#FF9F43] text-white w-12 h-12 shadow-md active:scale-95 transition-transform flex items-center justify-center shrink-0 rounded-xl"><Icons.Plus size={28}/></button></div></div></div>
+                <div className="flex-1 overflow-y-auto no-scrollbar pb-32 px-4 min-h-0"><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">{(expenseFilter === 'all' ? expenses : expenses.filter(e => e.date === expenseFilter)).slice().reverse().map(expense => ( <div key={expense.id} className="bg-white p-3 border-2 border-gray-100 shadow-sm flex justify-between items-center h-20 animate-in fade-in slide-in-from-bottom-2 ticket-box"> <div className="flex-1 overflow-hidden"><div className="text-xs text-gray-500 font-bold mb-1">{formatDate(expense.date)} • {expense.category}</div><div className="text-lg font-bold text-gray-900 truncate pr-2">{expense.item}</div><div className="text-xs text-gray-400 font-bold mt-1">{expense.method} {expense.platform ? `/ ${expense.platform}` : ''}</div></div> <div className="text-right shrink-0 flex items-center gap-1"> <div><div className="text-xl font-bold text-[#FF9F43]">{CURRENCIES.find(c => c.code === expense.currency)?.symbol}{expense.amount.toLocaleString()}</div>{expense.currency !== 'TWD' && <div className="text-xs text-gray-400 font-bold">≈ ${Math.round(expense.amount * getExchangeRate(expense.currency))}</div>}</div> <div className="flex flex-col"> <button onClick={() => handleEditExpense(expense)} className="text-gray-300 hover:text-blue-400 p-1"><Icons.Edit size={16}/></button> <button onClick={() => handleDeleteExpense(expense.id)} className="text-gray-300 hover:text-red-400 p-1"><Icons.Trash2 size={16} /></button> </div> </div></div> ))}</div></div>
+                <CalculatorModal isOpen={showCalculator && calcTarget === 'expense'} onClose={() => setShowCalculator(false)} onConfirm={(val) => setNewExpense(prev => ({ ...prev, amount: val }))} initialValue={newExpense.amount} />
+              </div>
+            )}
+
+            {activeTab === 'shopping' && (
+              <div className="h-full overflow-y-auto p-4 pb-24 no-scrollbar">
+                <div className="flex gap-2 text-white mb-4"><div className="flex-1 bg-[#FF6B81] p-3 border-2 border-black shadow-md ticket-box"><div className="text-sm font-bold opacity-90">🙆‍♀️ 自用</div><div className="font-bold text-2xl">¥{shoppingStats.selfTotal.toLocaleString()}</div></div><div className="flex-1 bg-[#6C5CE7] p-3 border-2 border-black shadow-md ticket-box"><div className="text-sm font-bold opacity-90">📦 代購收</div><div className="font-bold text-2xl text-white">${Math.round(shoppingStats.agentTotal * getExchangeRate('JPY')).toLocaleString()}</div></div></div>
+                {Object.keys(agentSummary).length > 0 && (<div className="bg-[#E8EAF6] p-4 border-2 border-[#C5CAE9] mb-4 shadow-sm ticket-box"><h3 className="font-bold text-[#3949AB] mb-2 flex items-center gap-2"><Icons.Coins size={20}/> 代購結算 (每人總計)</h3><div className="space-y-2">{Object.entries(agentSummary).map(([name, totals]) => (<div key={name} className="flex justify-between items-center bg-white/60 p-2 rounded-xl"><span className="font-bold text-gray-700">{name}</span><div className="text-right"><div className="text-sm font-bold text-gray-500">¥{totals.jpy.toLocaleString()}</div><div className="text-lg font-black text-[#3949AB]">${totals.twd.toLocaleString()}</div></div></div>))}</div></div>)}
+                <div className="bg-white p-5 shadow-lg border-2 border-gray-100 mb-6 rounded-2xl"><div className="flex bg-gray-100 p-1 mb-3 border-2 border-gray-200 rounded-xl">{['self', 'agent', 'split'].map(type => ( <button key={type} onClick={() => setNewShopItem({...newShopItem, type})} className={`flex-1 py-2 text-lg font-bold transition-all rounded-lg ${newShopItem.type === type ? 'bg-white shadow text-black' : 'text-gray-400'}`}>{type === 'self' ? '自用' : type === 'agent' ? '代購' : '分帳'}</button> ))}</div><div className="flex gap-2 mb-2"><button onClick={() => { setBatchType('shopping'); setShowBatchModal(true); }} className="w-full bg-[#E0F2F1] text-[#00695C] py-2 font-bold mb-1 border-2 border-[#80CBC4] flex items-center justify-center gap-2 rounded-xl"><Icons.ListPlus size={20}/> 批次匯入</button></div><div className="flex gap-3 mb-3"><select value={newShopItem.priority} onChange={e => setNewShopItem({...newShopItem, priority: e.target.value})} className="bg-gray-50 border-2 border-gray-200 px-2 outline-none text-base font-bold w-32 dashed-input"><option value="high">🔴 必買</option><option value="medium">🟡 選購</option><option value="low">🟢 可買</option></select><input placeholder="戰利品名稱..." value={newShopItem.item} onChange={e => setNewShopItem({...newShopItem, item: e.target.value})} className="flex-1 bg-gray-50 border-2 border-gray-200 px-4 py-3 outline-none font-bold text-xl text-gray-800 dashed-input" /></div><div className="flex gap-3 mb-3"><input type="number" placeholder="日幣 ¥" value={newShopItem.budget} onChange={e => setNewShopItem({...newShopItem, budget: e.target.value})} className="flex-1 bg-gray-50 border-2 border-gray-200 px-4 py-3 outline-none text-xl font-bold dashed-input" /></div>{(newShopItem.type === 'agent' || newShopItem.type === 'split') && ( <div className="flex gap-3 mb-3 animate-in fade-in">{newShopItem.type === 'agent' && <input placeholder="幫誰買?" value={newShopItem.note} onChange={e => setNewShopItem({...newShopItem, note: e.target.value})} className="flex-1 bg-[#EDE7F6] border-2 border-[#6C5CE7] px-4 py-3 outline-none text-[#6C5CE7] font-bold text-lg dashed-input" />}{newShopItem.type === 'split' && <div className="flex-1 flex items-center bg-[#FFF3E0] border-2 border-[#FFA502] px-4 text-[#FFA502] font-bold dashed-input"><span className="text-sm mr-2">人數:</span><input type="number" value={newShopItem.splitCount} onChange={e => setNewShopItem({...newShopItem, splitCount: e.target.value})} className="w-full bg-transparent outline-none text-xl" /></div>}</div> )}<button onClick={handleAddShoppingItem} className="w-full bg-[#FF6B81] text-white py-3 border-2 border-black korean-3d-btn font-bold text-xl flex items-center justify-center gap-2 mt-2 rounded-xl"><Icons.Plus size={24}/> 加入清單</button></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">{(shoppingList || []).filter(i => !i.bought).map(item => ( <div key={item.id} className="bg-white p-4 border-4 shadow-sm flex items-center justify-between ticket-box" style={{ borderColor: item.type === 'agent' ? '#6C5CE7' : item.type === 'split' ? '#FFA502' : '#FF6B81' }}> <div className="flex items-center gap-4 cursor-pointer w-full" onClick={() => handleShoppingItemClick(item)}> <div className="shrink-0" onClick={(e)=>{e.stopPropagation();triggerFileAction('shoppingPhoto',item.id)}}>{item.photo ? <img src={item.photo} className="w-16 h-16 object-cover rounded-lg border-2 border-white shadow-sm"/> : <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300 border-2 border-dashed border-gray-300 hover:border-pink-300 hover:text-pink-300 transition-colors"><Icons.Camera size={20}/></div>}</div> <div className={`w-2 h-16 self-center rounded-full ${item.type === 'agent' ? 'bg-[#6C5CE7]' : item.type === 'split' ? 'bg-[#FFA502]' : 'bg-[#FF6B81]'}`}></div> <div className="flex-1 overflow-hidden"> <div className="flex items-center gap-2"><span className={`text-xs px-2 py-1 rounded-lg shrink-0 text-white font-bold shadow-sm ${item.priority === 'high' ? 'bg-red-500' : item.priority === 'medium' ? 'bg-yellow-400' : 'bg-green-400'}`}>{item.priority === 'high' ? '必買' : item.priority === 'medium' ? '選購' : '可買'}</span><span className="font-bold text-xl text-gray-800 truncate">{item.item}</span></div> <div className="text-sm text-gray-500 font-bold mt-1 flex items-center gap-2"> <span className="bg-gray-100 px-2 rounded">¥{item.budget.toLocaleString()}</span><span className="text-gray-300">➜</span><span className="text-gray-900 font-bold text-lg">{item.type === 'split' ? `$${Math.round((item.budget * getExchangeRate('JPY')) / item.splitCount)} /人` : `$${Math.round(item.budget * getExchangeRate('JPY'))}`}</span> {item.expenseId && <span className="text-[10px] bg-orange-100 text-orange-600 px-1 rounded border border-orange-200">已記帳</span>} </div> {(item.type === 'agent' || item.type === 'split') && ( <div className="text-xs font-bold text-gray-400 mt-2 bg-gray-50 w-fit px-2 py-1 rounded">{item.type === 'agent' ? `給: ${item.note}` : `${item.splitCount}人分帳`}</div> )} </div> </div> <button onClick={() => deleteShoppingItem(item.id)} className="text-gray-300 p-2 shrink-0 hover:text-red-400"><Icons.Trash2 size={24}/></button> </div> ))}</div>
+                {(shoppingList || []).filter(i => i.bought).length > 0 && <div className="text-gray-400 text-lg font-bold mt-6 mb-3 border-b-2 border-gray-200 pb-1">已購買完成</div>}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">{(shoppingList || []).filter(i => i.bought).map(item => (<div key={item.id} onClick={() => handleShoppingItemClick(item)} className="bg-gray-100 p-3 rounded-xl border-2 border-gray-200 flex items-center gap-3 opacity-60"><Icons.Check size={20} className="text-gray-500"/><span className="line-through text-gray-500 font-bold text-lg">{item.item}</span></div>))}</div>
+                <CalculatorModal isOpen={showCalculator && calcTarget === 'shopping'} onClose={() => setShowCalculator(false)} onConfirm={(val) => setNewShopItem(prev => ({ ...prev, budget: val }))} initialValue={newShopItem.budget} />
+              </div>
+            )}
+            
+            {activeTab === 'packing' && (
+              <div className="h-full overflow-y-auto p-4 pb-24 no-scrollbar">
+                <div className="bg-white p-4 shadow-lg border-2 border-gray-100 mb-6 rounded-2xl"><div className="flex gap-2"><input value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="新增分類名稱 (如: 攝影裝備)..." className="flex-1 bg-gray-50 border-2 border-gray-200 px-4 py-2 outline-none font-bold text-lg dashed-input" /><button onClick={addPackingCategory} className="bg-[#6C5CE7] text-white px-4 font-bold flex items-center rounded-xl"><Icons.Plus size={20}/> 分類</button></div><button onClick={() => { setBatchType('packing'); setBatchTargetCategory(null); setShowBatchModal(true); }} className="w-full bg-[#E0F2F1] text-[#00695C] py-2 font-bold mt-2 border-2 border-[#80CBC4] flex items-center justify-center gap-2 rounded-xl"><Icons.ListPlus size={20}/> 批次匯入清單 (預設未分類)</button></div>
+                <div className="space-y-6">{packingCategories.map(cat => { const items = (packingList || []).filter(i => i.category === cat); return ( <div key={cat} className="animate-in fade-in slide-in-from-bottom-2"> <div className="flex justify-between items-center mb-3 ml-2"><h3 className="font-bold text-xl text-gray-800 flex items-center gap-2"><span className="w-2 h-6 bg-[#FF6B6B] rounded-full"></span>{cat}</h3><div className="flex gap-2"><button onClick={() => { setBatchType('packing'); setBatchTargetCategory(cat); setShowBatchModal(true); }} className="p-1 rounded-lg border-2 bg-gray-100 text-gray-500 border-gray-200 hover:text-blue-500"><Icons.ListPlus size={18}/></button><button onClick={() => setActivePackingCategory(activePackingCategory === cat ? null : cat)} className={`p-1 rounded-lg border-2 ${activePackingCategory === cat ? 'bg-[#FF6B6B] text-white border-[#FF6B6B]' : 'bg-white text-gray-400 border-gray-300'} rounded-full`}><Icons.Plus size={18}/></button><button onClick={() => deletePackingCategory(cat)} className="text-gray-300 hover:text-red-400 p-1"><Icons.Trash2 size={18}/></button></div></div> {activePackingCategory === cat && (<div className="flex gap-2 mb-3 px-1"><input autoFocus value={newPackingItemText} onChange={e => setNewPackingItemText(e.target.value)} placeholder={`新增物品到 ${cat}...`} className="flex-1 bg-white border-2 border-[#FF6B6B] px-3 py-2 outline-none font-bold text-lg dashed-input" /><button onClick={() => addPackingItemToCategory(cat)} className="bg-[#FF6B6B] text-white px-4 font-bold rounded-xl">加入</button></div>)} <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{items.map(item => (<div key={item.id} onClick={() => togglePackingItem(item.id)} className={`p-4 border-2 flex items-center justify-between transition-all cursor-pointer ticket-box ${item.checked ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-white border-gray-200 shadow-sm'}`}><div className="flex items-center gap-4"><div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center ${item.checked ? 'bg-[#4ECDC4] border-[#4ECDC4]' : 'border-gray-300'}`}>{item.checked && <Icons.Check size={16} className="text-white"/>}</div><span className={`text-xl font-thin-hand ${item.checked ? 'line-through text-gray-400' : 'text-gray-800'}`}>{item.item}</span></div><button onClick={(e) => { e.stopPropagation(); deletePackingItem(item.id); }} className="text-gray-300 hover:text-red-400 p-2"><Icons.Trash2 size={20}/></button></div>))}</div> </div> ) })}</div>
+              </div>
+            )}
+            
+            {activeTab === 'info' && (
+              <div className="h-full overflow-y-auto p-4 pb-24 no-scrollbar space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                     <div className="space-y-2"><a href="https://www.vjw.digital.go.jp/" target="_blank" className="bg-white p-2 border border-blue-200 shadow-sm flex items-center gap-2 hover:bg-blue-50 ticket-box"><span className="text-xl">🇯🇵</span><span className="text-blue-600 font-bold text-sm">VJW 入境</span></a><a href="https://tenki.jp/" target="_blank" className="bg-white p-2 border border-blue-200 shadow-sm flex items-center gap-2 hover:bg-blue-50 ticket-box"><span className="text-xl">🌤️</span><span className="text-blue-600 font-bold text-sm">天氣 Tenki.jp</span></a><a href="https://www.google.com/finance/quote/JPY-TWD" target="_blank" className="bg-white p-2 border border-blue-200 shadow-sm flex items-center gap-2 hover:bg-blue-50 ticket-box"><span className="text-xl">💰</span><span className="text-blue-600 font-bold text-sm">即時匯率</span></a></div>
+                     <div className="bg-[#FFEBEE] p-3 border border-[#FFCDD2] flex flex-col justify-between ticket-box h-full"><div className="flex justify-between items-center mb-2"><span className="text-sm font-bold text-gray-700">👮 報警</span><a href="tel:110" className="text-red-600 font-black text-lg">110</a></div><div className="flex justify-between items-center mb-2"><span className="text-sm font-bold text-gray-700">🚑 救護</span><a href="tel:119" className="text-red-600 font-black text-lg">119</a></div><div className="flex flex-col gap-1 mt-1 border-t border-red-200 pt-1"><span className="text-sm font-bold text-gray-700">🇹🇼 駐大阪辦事處</span><a href="tel:+81-90-8794-4568" className="text-red-600 font-black text-sm block text-right">緊急專線</a><a href="https://maps.google.com/?q=大阪市北區中之島2-3-18 中之島Festival Tower 17樓" target="_blank" className="text-xs text-gray-500 underline leading-tight block text-right">大阪市北區中之島2-3-18<br/>中之島Festival Tower 17樓</a></div></div>
+                </div>
+                <div className="bg-[#E8EAF6] p-4 border-2 border-[#C5CAE9] rounded-2xl"><div className="flex justify-between items-center mb-2"><h3 className="font-bold text-xl text-[#3949AB] flex items-center gap-2"><Icons.Bed size={22}/> 住宿情報</h3><button onClick={() => setShowAddHotel(!showAddHotel)} className="bg-[#3949AB] text-white px-3 py-1 text-sm font-bold rounded-lg">{showAddHotel ? '取消' : '+ 新增'}</button></div>{showAddHotel && (<div className="bg-white p-3 mb-3 animate-in fade-in rounded-xl"><div className="flex flex-col gap-1 mb-2"><label className="text-xs text-gray-500 font-bold">Check-in 日期</label><input type="date" value={newHotel.date} onChange={e => setNewHotel({...newHotel, date: e.target.value})} className="border-b outline-none font-bold w-full" /></div><input placeholder="飯店名稱" value={newHotel.name} onChange={e => setNewHotel({...newHotel, name: e.target.value})} className="w-full border-b mb-2 outline-none font-bold text-lg" /><input placeholder="地址 (供導航用)" value={newHotel.address} onChange={e => setNewHotel({...newHotel, address: e.target.value})} className="w-full border-b mb-2 outline-none text-sm" /><input placeholder="訂單編號/電話/備註" value={newHotel.note} onChange={e => setNewHotel({...newHotel, note: e.target.value})} className="w-full border-b mb-2 outline-none text-sm text-gray-500" /><button onClick={handleAddHotel} className="w-full bg-[#3949AB] text-white py-2 font-bold rounded-lg">儲存飯店</button></div>)}<div className="space-y-2">{(accommodations || []).sort((a,b) => new Date(a.date) - new Date(b.date)).map(h => (<div key={h.id} className="bg-white p-3 shadow-sm border border-[#C5CAE9] relative ticket-box"><div className="flex justify-between items-start"><div className="flex-1">{h.date && <div className="text-xs font-bold text-[#3949AB] bg-[#E8EAF6] w-fit px-2 rounded mb-1">{formatDate(h.date)} ({getWeekday(h.date)}) Check-in</div>}<div className="font-bold text-lg text-gray-800 pr-6">{h.name}</div></div></div>{h.address && <button onClick={(e) => openGoogleMaps(e, h.address)} className="text-blue-500 text-xs font-bold underline flex items-center gap-1 my-1"><Icons.Map size={12}/> {h.address}</button>}{h.note && <div className="text-sm text-gray-500 bg-gray-50 p-1 rounded mt-1">📝 {h.note}</div>}<button onClick={() => handleDeleteHotel(h.id)} className="absolute top-2 right-2 text-gray-300 hover:text-red-400"><Icons.Trash2 size={16}/></button></div>))}</div></div>
+                <div className="bg-[#E0F2F1] p-4 border-2 border-[#80CBC4] rounded-2xl"><div className="flex justify-between items-center mb-2"><h3 className="font-bold text-xl text-[#00695C] flex items-center gap-2"><Icons.Ticket size={22}/> 預約車訊</h3><button onClick={() => setShowAddReserv(!showAddReserv)} className="bg-[#00695C] text-white px-3 py-1 text-sm font-bold rounded-lg">{showAddReserv ? '取消' : '+ 新增'}</button></div>{showAddReserv && (<div className="bg-white p-3 mb-3 animate-in fade-in rounded-xl"><input placeholder="預約項目 (如: Haruka車票)" value={newReserv.title} onChange={e => setNewReserv({...newReserv, title: e.target.value})} className="w-full border-b mb-2 outline-none font-bold" /><div className="flex flex-col gap-1 mb-2"><label className="text-xs text-gray-500 font-bold">日期與時間</label><input type="datetime-local" value={newReserv.time} onChange={e => setNewReserv({...newReserv, time: e.target.value})} className="w-full border-b outline-none text-sm" /></div><input placeholder="預約代號 / 座位 / 備註" value={newReserv.code} onChange={e => setNewReserv({...newReserv, code: e.target.value})} className="w-full border-b mb-2 outline-none text-sm text-gray-500" /><button onClick={handleAddReserv} className="w-full bg-[#00695C] text-white py-2 font-bold rounded-lg">儲存預約</button></div>)}<div className="space-y-2">{(reservations || []).sort((a,b) => new Date(a.time) - new Date(b.time)).map(r => (<div key={r.id} className="bg-white p-3 shadow-sm border border-[#80CBC4] relative ticket-box"><div className="flex justify-between items-start"><div>{r.time && <div className="text-xs font-bold bg-[#B2DFDB] text-[#00695C] px-2 py-1 rounded h-fit mb-1">{new Date(r.time).toLocaleString([], {month:'numeric', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit'})}</div>}<div className="font-bold text-gray-800">{r.title}</div></div></div>{r.code && <div className="text-lg font-mono font-bold text-gray-600 mt-1 tracking-wider">{r.code}</div>}<button onClick={() => handleDeleteReserv(r.id)} className="absolute bottom-2 right-2 text-gray-300 hover:text-red-400"><Icons.Trash2 size={16}/></button></div>))}</div></div>
+                <div className="bg-[#FFF3E0] p-4 border-2 border-[#FFE0B2] rounded-2xl"><div className="flex justify-between items-center mb-2"><h3 className="font-bold text-xl text-[#E65100] flex items-center gap-2"><Icons.Utensils size={22}/> 美食特搜</h3><div className="flex gap-2"><button onClick={() => setShowAddGourmet(!showAddGourmet)} className="bg-[#E65100] text-white px-3 py-1 text-sm font-bold rounded-lg">{showAddGourmet ? '取消' : '+ 新增'}</button></div></div>{showAddGourmet && (<div className="bg-white p-3 mb-3 animate-in fade-in border-2 border-[#FFCCBC] rounded-xl"><div className="flex gap-2 mb-2"><select value={newGourmet.city} onChange={e => setNewGourmet({...newGourmet, city: e.target.value})} className="bg-gray-50 rounded p-1 text-sm font-bold outline-none">{CITIES.map(c => <option key={c} value={c}>{c}</option>)}</select><input placeholder="店名 (如: 燒肉力丸)" value={newGourmet.name} onChange={e => setNewGourmet({...newGourmet, name: e.target.value})} className="flex-1 border-b outline-none font-bold" /></div><input placeholder="地點/分店 (供導航用)" value={newGourmet.location} onChange={e => setNewGourmet({...newGourmet, location: e.target.value})} className="w-full border-b mb-2 outline-none text-sm" /><div onClick={() => triggerFileAction('gourmetPhoto', 'new')} className="w-full h-24 bg-gray-50 border-2 border-dashed border-gray-300 flex items-center justify-center mb-2 cursor-pointer overflow-hidden rounded-xl">{newGourmet.photo ? <img src={newGourmet.photo} className="w-full h-full object-cover"/> : <span className="text-gray-400 text-xs flex items-center gap-1"><Icons.Camera size={14}/> 上傳美食照</span>}</div><input placeholder="必吃/備註..." value={newGourmet.note} onChange={e => setNewGourmet({...newGourmet, note: e.target.value})} className="w-full border-b mb-2 outline-none text-sm text-gray-500" /><button onClick={handleAddGourmet} className="w-full bg-[#E65100] text-white py-2 font-bold rounded-lg">加入清單</button></div>)}<div className="grid grid-cols-2 gap-3">{(gourmetList || []).map(g => (<div key={g.id} className="bg-white shadow-sm border border-[#FFE0B2] overflow-hidden relative flex flex-col ticket-box"><div onClick={() => triggerFileAction('gourmetPhoto', g.id)} className="h-24 bg-gray-100 w-full relative group cursor-pointer">{g.photo ? <img src={g.photo} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-gray-300"><Icons.Utensils size={30}/></div>}<div className="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center text-white font-bold text-xs">更換照片</div><span className="absolute top-1 left-1 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded backdrop-blur-sm">{g.city}</span></div><div className="p-2 flex-1 flex flex-col"><div className="font-bold text-gray-800 text-sm mb-1 leading-tight">{g.name}</div>{g.location && <button onClick={(e) => openGoogleMaps(e, g.location)} className="text-blue-500 text-[10px] font-bold underline flex items-center gap-1 mb-1"><Icons.Map size={10}/> {g.location}</button>}{g.note && <div className="text-[10px] text-gray-500 bg-gray-50 p-1 rounded mt-auto">{g.note}</div>}</div><button onClick={() => handleDeleteGourmet(g.id)} className="absolute top-1 right-1 text-white drop-shadow-md hover:text-red-400"><Icons.Trash2 size={16}/></button></div>))}</div></div>
+                <div className="flex-1 flex flex-col"><h3 className="font-bold text-xl text-gray-800 mb-2 flex items-center gap-2"><Icons.ListPlus size={24}/> 自由備忘錄</h3><textarea className="w-full h-40 bg-[#FFFDE7] border-2 border-[#FFF59D] p-4 text-gray-700 font-bold text-lg outline-none resize-none shadow-sm leading-relaxed dashed-input" placeholder="在這裡貼上航班資訊、飯店地址、或是任何想記下來的事情..." value={memoContent} onChange={(e) => setMemoContent(e.target.value)}></textarea></div>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white border-t-2 border-gray-100 shrink-0 safe-area-bottom shadow-[0_-5px_15px_rgba(0,0,0,0.05)] grid grid-cols-5 gap-1 p-2 h-20 items-end pb-4 z-50 relative">
+            <TabButton id="itinerary" IconComp={Icons.Map} label="行程" bgColor="#FFECF2" activeColor="#FF6B81" />
+            <TabButton id="expenses" IconComp={Icons.Coins} label="記帳" bgColor="#FFF8E1" activeColor="#FFB74D" />
+            <TabButton id="shopping" IconComp={Icons.ShoppingBag} label="戰利品" bgColor="#E0F2F1" activeColor="#4DB6AC" />
+            <TabButton id="packing" IconComp={Icons.Suitcase} label="行李" bgColor="#F3E5F5" activeColor="#BA68C8" />
+            <TabButton id="info" IconComp={Icons.Info} label="資訊" bgColor="#E3F2FD" activeColor="#64B5F6" />
+          </div>
+
+        </div>
+      );
+    }
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
